@@ -1290,8 +1290,17 @@ function buildAndCapture(days,titleText,mode){
     else dayRows.forEach(row=>{
       const key=skKey(row.status);const card=document.createElement('div');card.className='snap-card';
       card.style.background=bgMap[key];card.style.borderColor=bdMap[key];
-      card.innerHTML=(row.path?'<div class="sc-path">'+h(row.path)+'</div>':'')+
-        '<div class="sc-title">'+h(row.task||'')+'</div>'+
+      // same split logic as renderCard
+      let snapPath='', snapTitle=row.task||'';
+      if(row.path){
+        const parts=row.path.split(' > ');
+        if(parts.length>=2){
+          snapPath=parts.slice(0,-1).join(' > ');
+          snapTitle=parts[parts.length-1]+'  '+snapTitle;
+        } else { snapPath=row.path; }
+      }
+      card.innerHTML=(snapPath?'<div class="sc-path" style="font-size:9px;color:#5c6bc0;font-weight:600;opacity:.8;margin-bottom:1px">'+h(snapPath)+'</div>':'')+
+        '<div class="sc-title" style="font-size:12px;font-weight:700;color:#1a1d2e;margin-bottom:3px">'+h(snapTitle)+'</div>'+
         '<span class="sc-badge" style="background:'+bbMap[key]+'">'+( row.status||'학습 대기')+'</span>'+
         (row.memo?'<div style="font-size:9px;color:#666;margin-top:3px">'+h(row.memo)+'</div>':'');
       body.appendChild(card);
