@@ -1265,16 +1265,20 @@ function captureToday(){
 }
 function captureWeek(){
   const cfg=settings[cur]||{startDow:1,dayTypes:getDT()};
+  const dayTypes=cfg.dayTypes||getDT();
   const wDs=weekDates(cfg.startDow);
-  buildAndCapture(wDs.map(d=>({date:d,dateStr:ds(d)})),cur+' — 주간 플래너','week');
+  const visibleDays=hideOff?wDs.filter(d=>(dayTypes[d.getDay()]||'class')!=='off'):wDs;
+  const cols=visibleDays.length;
+  buildAndCapture(visibleDays.map(d=>({date:d,dateStr:ds(d)})),cur+' — 주간 플래너','week',cols);
 }
-function buildAndCapture(days,titleText,mode){
+function buildAndCapture(days,titleText,mode,cols){
   const todayStr=ds(new Date());
+  const numCols=cols||(mode==='single'?1:days.length);
   const wrap=document.createElement('div');wrap.className='snap-wrap';
-  wrap.style.width=(mode==='single'?340:1100)+'px';
+  wrap.style.width=(mode==='single'?340:Math.max(340,numCols*158))+'px';
   const te=document.createElement('div');te.className='snap-title';te.innerHTML='📚 <span>'+titleText+'</span>';wrap.appendChild(te);
   const grid=document.createElement('div');grid.className='snap-grid';
-  grid.style.gridTemplateColumns='repeat('+(mode==='single'?1:7)+',1fr)';wrap.appendChild(grid);
+  grid.style.gridTemplateColumns='repeat('+numCols+',1fr)';wrap.appendChild(grid);
   const bgMap={완료:'#e8f5e9',대기:'#f3f4f8',조정:'#fff3e0',테스트:'#ede7f6',불가:'#fce4ec'};
   const bdMap={완료:'#a5d6a7',대기:'#dde1ee',조정:'#ffcc80',테스트:'#ce93d8',불가:'#f48fb1'};
   const bbMap={완료:'#2e7d32',대기:'#9ea3bb',조정:'#e65100',테스트:'#4527a0',불가:'#b71c1c'};
