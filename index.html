@@ -204,8 +204,8 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--bg);colo
 .tc-del{position:absolute;top:4px;right:4px;background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:10px;opacity:0;transition:opacity .1s;padding:1px 3px;border-radius:3px;line-height:1}
 .task-card:hover .tc-del{opacity:1}
 .tc-del:hover{background:rgba(183,28,28,.15);color:#b71c1c}
-.tc-path{font-size:9px;color:var(--text3);margin-bottom:2px;line-height:1.4;word-break:break-all}
-.tc-title{font-weight:600;color:var(--text);line-height:1.4;margin-bottom:5px;padding-right:14px;word-break:break-all}
+.tc-path{font-size:10px;color:var(--accent);margin-bottom:1px;line-height:1.4;word-break:break-all;font-weight:600;opacity:.8}
+.tc-title{font-weight:700;color:var(--text);line-height:1.4;margin-bottom:5px;padding-right:14px;word-break:break-all;font-size:12px}
 .tc-status{width:100%;border:none;font-family:inherit;font-size:10px;font-weight:700;cursor:pointer;border-radius:5px;padding:4px 6px;outline:none;-webkit-appearance:none;appearance:none;text-align:center;display:block}
 .task-card.s-완료 .tc-status{background:var(--c-완료-bb);color:#fff}
 .task-card.s-대기 .tc-status{background:var(--c-대기-bb);color:var(--text2)}
@@ -990,7 +990,7 @@ function updateVocabPreview(){
   vocabSelectedDates.forEach(dateStr=>{
     const d=new Date(dateStr+'T00:00:00');
     const end=Math.min(cur2+perDay-1,to);
-    const label=cur2===end?`${vocabPopupBook.name} ${cur2}강 단어 암기`:`${vocabPopupBook.name} ${cur2}강~${end}강 단어 암기`;
+    const label=cur2===end?`${cur2}강 학습`:`${cur2}강~${end}강 학습`;
     html+=`<br><strong>${DKR[d.getDay()]} ${d.getMonth()+1}/${d.getDate()}</strong>: ${label}`;
     cur2+=perDay;
   });
@@ -1007,7 +1007,7 @@ async function confirmVocab(){
   for(const dateStr of vocabSelectedDates){
     const d=new Date(dateStr+'T00:00:00');const dow=DFULL[d.getDay()];
     const end=Math.min(cur2+perDay-1,to);
-    const taskName=cur2===end?`${vocabPopupBook.name} ${cur2}강 단어 암기`:`${vocabPopupBook.name} ${cur2}강~${end}강 단어 암기`;
+    const taskName=cur2===end?`${cur2}강 학습`:`${cur2}강~${end}강 학습`;
     await addTask(dateStr,dow,taskName,'학습 대기','',vocabPopupBook.name+' 단어');
     cur2+=perDay;
   }
@@ -1129,7 +1129,22 @@ function renderDays(){
 function renderCard(row){
   const key=skKey(row.status);
   const opts=STATUSES.map(s=>`<option value="${s}"${row.status===s?' selected':''}>${s}</option>`).join('');
-  const pathEl=row.path?`<div class="tc-path">${h(row.path)}</div>`:'';
+  // Split path: show book part small, then "4강 강의 수강" as title
+  let pathEl='', titleText=row.task||'';
+  if(row.path){
+    // path e.g. "Syntax Build Up > 4강"
+    // title e.g. "강의 수강"
+    // render: path line = "Syntax Build Up", title = "4강  강의 수강"
+    const parts=row.path.split(' > ');
+    if(parts.length>=2){
+      const bookPart=parts.slice(0,-1).join(' > '); // "Syntax Build Up"
+      const gangPart=parts[parts.length-1];          // "4강"
+      pathEl=`<div class="tc-path">${h(bookPart)}</div>`;
+      titleText=gangPart+'  '+titleText;
+    } else {
+      pathEl=`<div class="tc-path">${h(row.path)}</div>`;
+    }
+  }
   const memoEl=row.memo
     ?`<div class="tc-memo" onclick="openMemo(${row.id},event)">📝 ${h(row.memo)}</div>`
     :`<div class="tc-memo-add" onclick="openMemo(${row.id},event)">＋ 메모</div>`;
@@ -1138,7 +1153,7 @@ function renderCard(row){
     ondragend="cdEnd(event)">
     <button class="tc-del" onclick="delCard(${row.id},event)">✕</button>
     ${pathEl}
-    <div class="tc-title">${h(row.task||'')}</div>
+    <div class="tc-title">${h(titleText)}</div>
     <select class="tc-status" onchange="chStatus(${row.id},this)" onclick="event.stopPropagation()">${opts}</select>
     ${memoEl}
   </div>`;
