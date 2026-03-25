@@ -170,6 +170,11 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--bg);colo
 .day-body{padding:5px;flex:1;transition:background .1s}
 .day-body.drag-over{background:var(--accent-light)!important;outline:2px dashed var(--accent);outline-offset:-3px;border-radius:5px}
 .drop-hint{text-align:center;padding:14px 6px;color:var(--text3);font-size:10px;border:1px dashed var(--border);border-radius:5px;margin:2px 0}
+/* day memo box */
+.day-memo-box{padding:4px 6px;border-top:1px solid var(--border);flex-shrink:0}
+.day-memo-input{width:100%;background:transparent;border:none;outline:none;font-family:inherit;font-size:11px;color:var(--text2);resize:none;height:36px;line-height:1.4;padding:2px 0}
+.day-memo-input::placeholder{color:var(--text3)}
+.day-memo-input:focus{color:var(--text)}
 
 .task-card{border-radius:7px;padding:7px 8px;margin-bottom:5px;font-size:11px;position:relative;cursor:grab;user-select:none;transition:box-shadow .12s,background .2s,border-color .2s;border:1.5px solid}
 .task-card:hover{box-shadow:var(--sh)}
@@ -487,8 +492,16 @@ async function dbInsert(row){
 }
 async function dbUpdate(id,row){
   setSaveState('saving');
-  try{await SB.patch('planner',id,row);setSaveState('saved');}
-  catch(e){setSaveState('error');toast('업데이트 실패: '+e.message,'error');}
+  try{
+    const res=await SB.patch('planner',id,row);
+    setSaveState('saved');
+    return res;
+  }catch(e){
+    setSaveState('error');
+    // show full error so we can diagnose
+    toast('업데이트 실패: '+e.message,'error');
+    console.error('dbUpdate error',id,row,e);
+  }
 }
 async function dbDelete(id){
   setSaveState('saving');
@@ -563,7 +576,24 @@ function saveLocalSettings(){
   }catch(e){}
 }
 
-// ── SIDEBAR ────────────────────────────────────────
+// ── DAY MEMOS (stored in localStorage per student+date) ──
+function getDayMemo(student,dateStr){
+  try{
+    const key='dm_'+teacher+'_'+student+'_'+dateStr;
+    return localStorage.getItem(key)||'';
+  }catch(e){return'';}
+}
+let dayMemoTimer=null;
+function saveDayMemo(student,dateStr,val){
+  clearTimeout(dayMemoTimer);
+  dayMemoTimer=setTimeout(()=>{
+    try{
+      const key='dm_'+teacher+'_'+student+'_'+dateStr;
+      if(val.trim())localStorage.setItem(key,val);
+      else localStorage.removeItem(key);
+    }catch(e){}
+  },400);
+}
 function renderSidebar(){
   document.getElementById('stuList').innerHTML=students.map(n=>{
     const rows=allData.filter(r=>r.name===n);
@@ -879,6 +909,7 @@ function renderDays(){
     const cards=dayRows.map(r=>renderCard(r)).join('');
     const hint=!dayRows.length?'<div class="drop-hint">드래그해서 추가</div>':'';
     const typeLabel=isSelf?'자습':isOff?'휴일':isTest?'테스트':'';
+    const dayMemo=getDayMemo(cur,dateStr);
     return`<div class="day-col${isToday?' today':''}${isOff?' off':''}${isSelf?' self-study':''}${isTest?' test-day':''}">
       <div class="day-hdr">
         <div class="d-dow">${DKR[dow]}${typeLabel?' <span class="day-type-badge badge-'+(isOff?'off':isSelf?'self':'test')+'">'+typeLabel+'</span>':''}</div>
@@ -889,6 +920,11 @@ function renderDays(){
         ondragleave="ddLeave('${dateStr}')"
         ondrop="ddDrop(event,'${dateStr}')">
         ${cards}${hint}
+      </div>
+      <div class="day-memo-box">
+        <textarea class="day-memo-input" placeholder="메모..."
+          oninput="saveDayMemo('${cur}','${dateStr}',this.value)"
+        >${h(dayMemo)}</textarea>
       </div>
     </div>`;
   }).join('');
@@ -997,7 +1033,7 @@ function renderDTPicker(dayTypes){
 function cycleDT(i){
   const cfg=settings[cur]||{startDow:1,dayTypes:getDT()};if(!cfg.dayTypes)cfg.dayTypes=getDT();
   const cur2=cfg.dayTypes[i]||'class';
-  const next=DT_CYCLE[(DT_CYCLE.indexOf(cur2)+1)%3];
+  const next=DT_CYCLE[(DT_CYCLE.indexOf(cur2)+1)%4];
   cfg.dayTypes[i]=next;settings[cur]=cfg;
   const btn=document.getElementById('dtp_'+i);
   if(btn){btn.style.cssText='border:2px solid;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;'+DT_STYLE[next];
@@ -1033,6 +1069,7 @@ function buildAndCapture(days,titleText,mode){
   days.forEach(({date,dateStr})=>{
     const dow=date.getDay();const isToday=dateStr===todayStr;
     const dayRows=allData.filter(r=>r.name===cur&&r.date===dateStr);
+    const dayMemoSnap=getDayMemo(cur,dateStr);
     const col=document.createElement('div');col.className='snap-day'+(isToday?' today':'');
     col.innerHTML='<div class="snap-day-hdr"><span class="snap-day-dow">'+DKR[dow]+'</span><span class="snap-day-date">'+(date.getMonth()+1)+'/'+date.getDate()+'</span></div>';
     const body=document.createElement('div');body.className='snap-day-body';
@@ -1046,7 +1083,14 @@ function buildAndCapture(days,titleText,mode){
         (row.memo?'<div style="font-size:9px;color:#666;margin-top:3px">'+h(row.memo)+'</div>':'');
       body.appendChild(card);
     });
-    col.appendChild(body);grid.appendChild(col);
+    col.appendChild(body);
+    if(dayMemoSnap){
+      const memoDiv=document.createElement('div');
+      memoDiv.style.cssText='padding:4px 8px 6px;border-top:1px solid #dde1ee;font-size:10px;color:#5a5f7d;white-space:pre-wrap;line-height:1.4';
+      memoDiv.textContent=dayMemoSnap;
+      col.appendChild(memoDiv);
+    }
+    grid.appendChild(col);
   });
   document.body.appendChild(wrap);toast('이미지 생성 중...','info');
   html2canvas(wrap,{scale:2,useCORS:true,backgroundColor:'#f5f6fa',logging:false}).then(canvas=>{
