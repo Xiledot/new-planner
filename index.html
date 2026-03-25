@@ -170,8 +170,20 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--bg);colo
 .day-body{padding:5px;flex:1;transition:background .1s}
 .day-body.drag-over{background:var(--accent-light)!important;outline:2px dashed var(--accent);outline-offset:-3px;border-radius:5px}
 .drop-hint{text-align:center;padding:14px 6px;color:var(--text3);font-size:10px;border:1px dashed var(--border);border-radius:5px;margin:2px 0}
+/* vocab popup */
+.vocab-item{display:flex;align-items:center;justify-content:space-between;padding:7px 10px 7px 16px;border-radius:6px;font-size:12px;font-weight:600;color:var(--text);transition:background .1s;cursor:pointer}
+.vocab-item:hover{background:var(--surface2)}
+.vocab-add-btn{background:var(--accent);border:none;color:#fff;border-radius:5px;padding:2px 9px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0}
+.vocab-add-btn:hover{opacity:.85}
+.vocab-group{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;padding:8px 10px 4px;margin-top:4px}
 /* day memo box */
 .day-memo-box{padding:4px 6px;border-top:1px solid var(--border);flex-shrink:0}
+.test-range-box{padding:4px 6px;border-top:1px solid #ce93d8;flex-shrink:0;background:rgba(237,231,246,.3)}
+.test-range-label{font-size:9px;font-weight:700;color:#7b1fa2;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.test-range-input{width:100%;background:transparent;border:none;outline:none;font-family:inherit;font-size:11px;color:#4a148c;resize:none;height:32px;line-height:1.4;padding:2px 0}
+.test-range-input::placeholder{color:#ce93d8}
+[data-theme=dark] .test-range-box{background:rgba(74,20,140,.15)}
+[data-theme=dark] .test-range-input{color:#b39ddb}
 .day-memo-input{width:100%;background:transparent;border:none;outline:none;font-family:inherit;font-size:11px;color:var(--text2);resize:none;height:36px;line-height:1.4;padding:2px 0}
 .day-memo-input::placeholder{color:var(--text3)}
 .day-memo-input:focus{color:var(--text)}
@@ -372,6 +384,34 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--bg);colo
   </div>
 </div>
 
+<!-- VOCAB RANGE MODAL -->
+<div class="moverlay" id="vocabModal" onclick="closeMO('vocabModal',event)">
+  <div class="modal">
+    <h2 id="vocabModalTitle">단어 추가</h2>
+    <p class="modal-sub" id="vocabModalSub">강 범위와 요일을 선택하세요</p>
+    <div class="frow">
+      <label>강 범위</label>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="number" class="finput" id="fVocabFrom" min="1" max="999" placeholder="시작" style="width:90px;text-align:center">
+        <span style="color:var(--text3);font-size:14px">~</span>
+        <input type="number" class="finput" id="fVocabTo" min="1" max="999" placeholder="끝" style="width:90px;text-align:center">
+        <span style="font-size:12px;color:var(--text2)">강</span>
+      </div>
+    </div>
+    <div class="frow">
+      <label>요일 선택 (여러 개 가능)</label>
+      <div class="date-grid" id="vocabDateGrid"></div>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-top:6px;padding:6px 10px;background:var(--surface2);border-radius:6px" id="vocabPreview">
+      범위와 요일을 선택하면 미리보기가 표시됩니다
+    </div>
+    <div class="mactions">
+      <button class="bcancl" onclick="closeM('vocabModal')">취소</button>
+      <button class="bsave" onclick="confirmVocab()">추가</button>
+    </div>
+  </div>
+</div>
+
 <!-- MEMO MODAL -->
 <div class="moverlay" id="memoModal" onclick="closeMO('memoModal',event)">
   <div class="modal">
@@ -467,7 +507,7 @@ const DT_STYLE={
 };
 
 let teacher=null, allData=[], students=[], settings={};
-let commonTree=[], personalTree={}, lecTab='common';
+let commonTree=[], personalTree={}, vocabTree=[], lecTab='common';
 let cur=null, wOff=0, dLec=null, dCard=null, editMemoRow=null, isDark=false;
 let addNodeCtx=null, editNodeCtx=null;
 let selectedLeaves=[], selectedDates=[], assignLeaves=[];
@@ -513,8 +553,8 @@ async function dbDelete(id){
 async function dbSaveLectures(type){
   setSaveState('saving');
   try{
-    const treeData=type==='common'?commonTree:(personalTree[teacher]||[]);
-    const tch=type==='common'?'common':teacher;
+    const treeData = type==='common' ? commonTree : type==='vocab' ? vocabTree : (personalTree[teacher]||[]);
+    const tch = (type==='common'||type==='vocab') ? type : teacher;
     await SB.upsert('lectures',{teacher:tch,type,data:treeData},'teacher,type');
     setSaveState('saved');
   }catch(e){setSaveState('error');toast('강의목록 저장 실패: '+e.message,'error');}
@@ -564,8 +604,8 @@ async function syncAll(){
     names.forEach(n=>{if(!students.includes(n))students.push(n);});students.sort();
     const lecs=await SB.get('lectures','');
     lecs.forEach(l=>{
-      // only overwrite if DB actually has data (not null/empty)
       if(l.type==='common'&&l.data&&l.data.length>0) commonTree=l.data;
+      else if(l.type==='vocab'&&l.data&&l.data.length>0) vocabTree=l.data;
       else if(l.type==='personal'&&l.teacher===teacher&&l.data&&l.data.length>0) personalTree[teacher]=l.data;
     });
     loadLocalSettings();renderSidebar();
@@ -591,10 +631,7 @@ function saveLocalSettings(){
 
 // ── DAY MEMOS (stored in localStorage per student+date) ──
 function getDayMemo(student,dateStr){
-  try{
-    const key='dm_'+teacher+'_'+student+'_'+dateStr;
-    return localStorage.getItem(key)||'';
-  }catch(e){return'';}
+  try{return localStorage.getItem('dm_'+teacher+'_'+student+'_'+dateStr)||'';}catch(e){return'';}
 }
 let dayMemoTimer=null;
 function saveDayMemo(student,dateStr,val){
@@ -602,8 +639,21 @@ function saveDayMemo(student,dateStr,val){
   dayMemoTimer=setTimeout(()=>{
     try{
       const key='dm_'+teacher+'_'+student+'_'+dateStr;
-      if(val.trim())localStorage.setItem(key,val);
-      else localStorage.removeItem(key);
+      if(val.trim())localStorage.setItem(key,val);else localStorage.removeItem(key);
+    }catch(e){}
+  },400);
+}
+function getTestRange(student,dateStr){
+  try{return localStorage.getItem('tr_'+teacher+'_'+student+'_'+dateStr)||'';}catch(e){return'';}
+}
+let testRangeTimer=null;
+function saveTestRange(student,dateStr,val){
+  clearTimeout(testRangeTimer);
+  testRangeTimer=setTimeout(()=>{
+    try{
+      const key='tr_'+teacher+'_'+student+'_'+dateStr;
+      if(val.trim())localStorage.setItem(key,val);else localStorage.removeItem(key);
+      // re-render card area to show range in cards if needed
     }catch(e){}
   },400);
 }
@@ -658,13 +708,15 @@ function renderMain(){
       <div class="lec-panel">
         <div class="lec-hdr">
           <span class="lec-hdr-title">강의 목록</span>
-          ${lecTab==='common'&&!canEditCommon()
-            ?'<span style="font-size:10px;color:var(--text3);background:var(--surface2);padding:2px 7px;border-radius:5px">읽기 전용</span>'
-            :`<button class="hdr-btn" onclick="openAddNode(null,0)">＋</button>`}
+          ${lecTab==='vocab'?''
+            :lecTab==='common'&&!canEditCommon()
+              ?'<span style="font-size:10px;color:var(--text3);background:var(--surface2);padding:2px 7px;border-radius:5px">읽기 전용</span>'
+              :`<button class="hdr-btn" onclick="openAddNode(null,0)">＋</button>`}
         </div>
         <div class="lec-tabs">
-          <button class="lec-tab${lecTab==='common'?' active':''}" onclick="switchLecTab('common')">공통 강의목록</button>
-          <button class="lec-tab${lecTab==='personal'?' active':''}" onclick="switchLecTab('personal')">개인 강의목록</button>
+          <button class="lec-tab${lecTab==='common'?' active':''}" onclick="switchLecTab('common')">공통</button>
+          <button class="lec-tab${lecTab==='vocab'?' active':''}" onclick="switchLecTab('vocab')">단어</button>
+          <button class="lec-tab${lecTab==='personal'?' active':''}" onclick="switchLecTab('personal')">개인</button>
         </div>
         <div class="sel-bar${selCnt>0?'':' hidden'}" id="selBar">
           <span class="sel-count">${selCnt}개 선택됨</span>
@@ -688,16 +740,20 @@ function weekDates(startDow){
 // ── LECTURE TREE ───────────────────────────────────
 function switchLecTab(tab){lecTab=tab;renderMain();}
 function getCurTree(){
+  if(lecTab==='vocab')return vocabTree;
   if(lecTab==='common')return commonTree;
   if(!personalTree[teacher])personalTree[teacher]=[];
   return personalTree[teacher];
 }
 function setCurTree(tree){
-  if(lecTab==='common')commonTree=tree;else personalTree[teacher]=tree;
+  if(lecTab==='vocab')vocabTree=tree;
+  else if(lecTab==='common')commonTree=tree;
+  else personalTree[teacher]=tree;
 }
 
 function renderTree(){
   const el=document.getElementById('lecList');if(!el)return;
+  if(lecTab==='vocab'){renderVocabTree();return;}
   const tree=getCurTree();
   if(!tree||!tree.length){
     el.innerHTML=`<div class="lec-empty">＋ 버튼으로 추가하세요<br><br>
@@ -842,7 +898,122 @@ async function saveEditNode(){
   toast('"'+name+'"으로 수정됨','success');
 }
 
-// ── SELECTION ──────────────────────────────────────
+// ── VOCAB TREE ─────────────────────────────────────
+// vocabTree = [{name:'중단끝(Start-Up)'}, {name:'중단끝(Build-Up)'}, {name:'중단끝(Jump-Up)'}]
+// Each vocab book is a simple item with a name — clicking opens the range popup
+let vocabPopupBook=null, vocabSelectedDates=[];
+
+function renderVocabTree(){
+  const el=document.getElementById('lecList');if(!el)return;
+  const canEdit=canEditCommon();
+  if(!vocabTree||!vocabTree.length){
+    el.innerHTML=`<div class="lec-empty">${canEdit?'＋ 버튼으로 단어 교재를 추가하세요':'단어 교재가 없습니다'}<br><br>
+      <span style="font-size:10px;color:var(--text3)">예: 중단끝(Jump-Up), 수능영단어 등</span></div>`;
+    if(canEdit){
+      const addBtn=document.createElement('div');
+      addBtn.style.cssText='padding:6px 10px';
+      addBtn.innerHTML=`<button onclick="openAddVocabBook()" style="width:100%;background:transparent;border:1px dashed var(--border);color:var(--accent);border-radius:7px;padding:6px;font-family:inherit;font-size:12px;cursor:pointer">＋ 단어 교재 추가</button>`;
+      el.appendChild(addBtn);
+    }
+    return;
+  }
+  let html=vocabTree.map((book,i)=>{
+    const editDel=canEdit?`
+      <button onclick="editVocabBook(${i},event)" style="background:transparent;border:none;font-size:10px;cursor:pointer;padding:1px 4px;opacity:0;color:var(--text3)" class="vbtn">✏️</button>
+      <button onclick="delVocabBook(${i},event)" style="background:transparent;border:none;font-size:10px;cursor:pointer;padding:1px 4px;opacity:0;color:var(--text3)" class="vbtn">✕</button>`:'';
+    return`<div class="vocab-item" onmouseenter="this.querySelectorAll('.vbtn').forEach(b=>b.style.opacity='1')" onmouseleave="this.querySelectorAll('.vbtn').forEach(b=>b.style.opacity='0')">
+      <span style="font-weight:600;color:var(--text)">${h(book.name)}</span>
+      <div style="display:flex;align-items:center;gap:4px">
+        ${editDel}
+        <button class="vocab-add-btn" onclick="openVocabPopup(${i},event)">＋ 추가</button>
+      </div>
+    </div>`;
+  }).join('');
+  if(canEdit) html+=`<div style="padding:6px 10px;margin-top:4px"><button onclick="openAddVocabBook()" style="width:100%;background:transparent;border:1px dashed var(--border);color:var(--text3);border-radius:7px;padding:5px;font-family:inherit;font-size:11px;cursor:pointer">＋ 단어 교재 추가</button></div>`;
+  el.innerHTML=html;
+}
+
+function openAddVocabBook(){
+  const name=prompt('단어 교재 이름:')?.trim();if(!name)return;
+  vocabTree.push({name});
+  renderVocabTree();
+  dbSaveLectures('vocab');
+}
+function editVocabBook(i,e){
+  e.stopPropagation();
+  const name=prompt('교재 이름 수정:',vocabTree[i].name)?.trim();if(!name)return;
+  vocabTree[i].name=name;renderVocabTree();dbSaveLectures('vocab');
+}
+function delVocabBook(i,e){
+  e.stopPropagation();
+  if(!confirm('"'+vocabTree[i].name+'"을 삭제할까요?'))return;
+  vocabTree.splice(i,1);renderVocabTree();dbSaveLectures('vocab');
+}
+
+function openVocabPopup(bookIdx,e){
+  e.stopPropagation();
+  vocabPopupBook=vocabTree[bookIdx];vocabSelectedDates=[];
+  document.getElementById('vocabModalTitle').textContent=vocabPopupBook.name+' — 단어 추가';
+  document.getElementById('vocabModalSub').textContent='강 범위와 날짜를 선택하세요';
+  document.getElementById('fVocabFrom').value='';
+  document.getElementById('fVocabTo').value='';
+  // populate date chips for current week
+  const cfg=settings[cur]||{startDow:1,dayTypes:getDT()};
+  const wDs=weekDates(cfg.startDow);
+  document.getElementById('vocabDateGrid').innerHTML=wDs.map(d=>{
+    const dateStr=ds(d);
+    return`<button class="date-chip" onclick="toggleVocabDate('${dateStr}',this)">${DKR[d.getDay()]} ${d.getMonth()+1}/${d.getDate()}</button>`;
+  }).join('');
+  document.getElementById('vocabPreview').textContent='범위와 날짜를 선택하면 미리보기가 표시됩니다';
+  // live preview
+  ['fVocabFrom','fVocabTo'].forEach(id=>document.getElementById(id).oninput=updateVocabPreview);
+  openM('vocabModal');
+  setTimeout(()=>document.getElementById('fVocabFrom').focus(),100);
+}
+function toggleVocabDate(dateStr,el){
+  const idx=vocabSelectedDates.indexOf(dateStr);
+  if(idx===-1)vocabSelectedDates.push(dateStr);else vocabSelectedDates.splice(idx,1);
+  vocabSelectedDates.sort();
+  el.classList.toggle('sel',vocabSelectedDates.includes(dateStr));
+  updateVocabPreview();
+}
+function updateVocabPreview(){
+  const from=parseInt(document.getElementById('fVocabFrom').value);
+  const to=parseInt(document.getElementById('fVocabTo').value);
+  const el=document.getElementById('vocabPreview');
+  if(!from||!to||!vocabSelectedDates.length){el.textContent='범위와 날짜를 선택하면 미리보기가 표시됩니다';return;}
+  if(from>to){el.textContent='시작 강이 끝 강보다 클 수 없어요';return;}
+  const total=to-from+1;const days=vocabSelectedDates.length;
+  const perDay=Math.ceil(total/days);
+  let html='<strong>미리보기</strong><br>';let cur2=from;
+  vocabSelectedDates.forEach(dateStr=>{
+    const d=new Date(dateStr+'T00:00:00');
+    const end=Math.min(cur2+perDay-1,to);
+    const label=cur2===end?`${vocabPopupBook.name} ${cur2}강 단어 암기`:`${vocabPopupBook.name} ${cur2}강~${end}강 단어 암기`;
+    html+=`<br><strong>${DKR[d.getDay()]} ${d.getMonth()+1}/${d.getDate()}</strong>: ${label}`;
+    cur2+=perDay;
+  });
+  el.innerHTML=html;
+}
+async function confirmVocab(){
+  const from=parseInt(document.getElementById('fVocabFrom').value);
+  const to=parseInt(document.getElementById('fVocabTo').value);
+  if(!from||!to){toast('강 범위를 입력하세요','error');return;}
+  if(from>to){toast('시작 강이 끝 강보다 클 수 없어요','error');return;}
+  if(!vocabSelectedDates.length){toast('날짜를 선택하세요','error');return;}
+  const total=to-from+1;const days=vocabSelectedDates.length;
+  const perDay=Math.ceil(total/days);let cur2=from;
+  for(const dateStr of vocabSelectedDates){
+    const d=new Date(dateStr+'T00:00:00');const dow=DFULL[d.getDay()];
+    const end=Math.min(cur2+perDay-1,to);
+    const taskName=cur2===end?`${vocabPopupBook.name} ${cur2}강 단어 암기`:`${vocabPopupBook.name} ${cur2}강~${end}강 단어 암기`;
+    await addTask(dateStr,dow,taskName,'학습 대기','',vocabPopupBook.name+' 단어');
+    cur2+=perDay;
+  }
+  closeM('vocabModal');
+  toast(`단어 추가 완료 ✓`,'success');
+  renderMain();
+}
 function clearSel(){selectedLeaves=[];renderMain();}
 function toggleLeaf(itemKey,leafName,parentPath){
   const idx=selectedLeaves.findIndex(l=>l.itemKey===itemKey);
@@ -928,6 +1099,7 @@ function renderDays(){
     const hint=!dayRows.length?'<div class="drop-hint">드래그해서 추가</div>':'';
     const typeLabel=isSelf?'자습':isOff?'휴일':isTest?'테스트':'';
     const dayMemo=getDayMemo(cur,dateStr);
+    const testRange=isTest?getTestRange(cur,dateStr):'';
     return`<div class="day-col${isToday?' today':''}${isOff?' off':''}${isSelf?' self-study':''}${isTest?' test-day':''}">
       <div class="day-hdr">
         <div class="d-dow">${DKR[dow]}${typeLabel?' <span class="day-type-badge badge-'+(isOff?'off':isSelf?'self':'test')+'">'+typeLabel+'</span>':''}</div>
@@ -939,6 +1111,12 @@ function renderDays(){
         ondrop="ddDrop(event,'${dateStr}')">
         ${cards}${hint}
       </div>
+      ${isTest?`<div class="test-range-box">
+        <div class="test-range-label">📝 테스트 범위</div>
+        <textarea class="test-range-input" placeholder="예: 점프업 2강~6강"
+          oninput="saveTestRange('${cur}','${dateStr}',this.value)"
+        >${h(testRange)}</textarea>
+      </div>`:''}
       <div class="day-memo-box">
         <textarea class="day-memo-input" placeholder="메모..."
           oninput="saveDayMemo('${cur}','${dateStr}',this.value)"
@@ -1088,6 +1266,7 @@ function buildAndCapture(days,titleText,mode){
     const dow=date.getDay();const isToday=dateStr===todayStr;
     const dayRows=allData.filter(r=>r.name===cur&&r.date===dateStr);
     const dayMemoSnap=getDayMemo(cur,dateStr);
+    const testRangeSnap=getTestRange(cur,dateStr);
     const col=document.createElement('div');col.className='snap-day'+(isToday?' today':'');
     col.innerHTML='<div class="snap-day-hdr"><span class="snap-day-dow">'+DKR[dow]+'</span><span class="snap-day-date">'+(date.getMonth()+1)+'/'+date.getDate()+'</span></div>';
     const body=document.createElement('div');body.className='snap-day-body';
@@ -1102,6 +1281,12 @@ function buildAndCapture(days,titleText,mode){
       body.appendChild(card);
     });
     col.appendChild(body);
+    if(testRangeSnap){
+      const trDiv=document.createElement('div');
+      trDiv.style.cssText='padding:4px 8px 5px;border-top:1px solid #ce93d8;background:rgba(237,231,246,.3);font-size:10px;color:#4a148c;line-height:1.4';
+      trDiv.innerHTML='<strong style="font-size:9px;color:#7b1fa2;text-transform:uppercase;letter-spacing:.5px">📝 테스트 범위</strong><br>'+h(testRangeSnap);
+      col.appendChild(trDiv);
+    }
     if(dayMemoSnap){
       const memoDiv=document.createElement('div');
       memoDiv.style.cssText='padding:4px 8px 6px;border-top:1px solid #dde1ee;font-size:10px;color:#5a5f7d;white-space:pre-wrap;line-height:1.4';
