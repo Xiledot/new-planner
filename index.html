@@ -298,6 +298,7 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--bg);colo
     <div class="spacer"></div>
     <div class="save-indicator" id="saveIndicator">✓ 저장됨</div>
     <span class="sync-info" id="syncInfo"></span>
+    <button class="tbtn" onclick="toggleHideOff()" id="hideOffBtn">🗓️ 휴일 숨기기</button>
     <button class="tbtn" onclick="syncAll()">🔄 동기화</button>
     <button class="tbtn" onclick="toggleTheme()" id="themeBtn">🌙 다크</button>
     <button class="tbtn" onclick="doLogout()">로그아웃</button>
@@ -471,6 +472,7 @@ let cur=null, wOff=0, dLec=null, dCard=null, editMemoRow=null, isDark=false;
 let addNodeCtx=null, editNodeCtx=null;
 let selectedLeaves=[], selectedDates=[], assignLeaves=[];
 let exportBlob=null, exportDataUrl=null;
+let hideOff=false;
 
 // ── AUTO-SAVE ──────────────────────────────────────
 let saveTimer=null;
@@ -539,6 +541,17 @@ function toggleTheme(){
   isDark=!isDark;
   document.documentElement.setAttribute('data-theme',isDark?'dark':'');
   document.getElementById('themeBtn').textContent=isDark?'☀️ 라이트':'🌙 다크';
+}
+function toggleHideOff(){
+  hideOff=!hideOff;
+  const btn=document.getElementById('hideOffBtn');
+  if(btn){
+    btn.textContent=hideOff?'🗓️ 휴일 보이기':'🗓️ 휴일 숨기기';
+    btn.style.background=hideOff?'var(--accent)':'';
+    btn.style.color=hideOff?'#fff':'';
+    btn.style.borderColor=hideOff?'var(--accent)':'';
+  }
+  if(cur)renderDays();
 }
 
 // ── SYNC ───────────────────────────────────────────
@@ -902,7 +915,12 @@ function renderDays(){
   const cfg=settings[cur]||{startDow:1,dayTypes:getDT()};
   const dayTypes=cfg.dayTypes||getDT();
   const wDs=weekDates(cfg.startDow);const todayStr=ds(new Date());
-  grid.innerHTML=wDs.map(d=>{
+
+  // filter out off days if hideOff is on
+  const visibleDays=hideOff?wDs.filter(d=>(dayTypes[d.getDay()]||'class')!=='off'):wDs;
+  grid.style.gridTemplateColumns=`repeat(${visibleDays.length},1fr)`;
+
+  grid.innerHTML=visibleDays.map(d=>{
     const dateStr=ds(d);const dow=d.getDay();const isToday=dateStr===todayStr;
     const dtype=dayTypes[dow]||'class';const isOff=dtype==='off';const isSelf=dtype==='self';const isTest=dtype==='test';
     const dayRows=allData.filter(r=>r.name===cur&&r.date===dateStr);
