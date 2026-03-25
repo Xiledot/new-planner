@@ -711,7 +711,8 @@ function renderMain(){
           ${lecTab==='vocab'?''
             :lecTab==='common'&&!canEditCommon()
               ?'<span style="font-size:10px;color:var(--text3);background:var(--surface2);padding:2px 7px;border-radius:5px">읽기 전용</span>'
-              :`<button class="hdr-btn" onclick="openAddNode(null,0)">＋</button>`}
+              :`<button class="hdr-btn" onclick="openAddNode(null,0)" title="추가">＋</button>
+                <button class="hdr-btn" style="font-size:13px" onclick="dbSaveLectures(lecTab==='common'?'common':'personal')" title="강의목록 저장">💾</button>`}
         </div>
         <div class="lec-tabs">
           <button class="lec-tab${lecTab==='common'?' active':''}" onclick="switchLecTab('common')">공통</button>
