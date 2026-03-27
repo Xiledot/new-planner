@@ -193,6 +193,13 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .day-body{padding:6px;flex:1;transition:background .1s}
 .day-body.drag-over{background:rgba(26,39,68,.06)!important;outline:2px dashed var(--navy);outline-offset:-3px;border-radius:8px}
 .drop-hint{text-align:center;padding:16px 6px;color:var(--text3);font-size:10px;border:1px dashed var(--border);border-radius:8px;margin:2px 0}
+.manual-hint{text-align:center;padding:10px 6px;color:var(--text3);font-size:10px;border:1px dashed var(--border);border-radius:8px;margin:4px 0;cursor:pointer;transition:all .15s}
+.manual-hint:hover{border-color:var(--navy);color:var(--navy);background:rgba(26,39,68,.04)}
+.manual-input-row{display:flex;gap:5px;margin:4px 0}
+.manual-input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:6px 8px;font-family:inherit;font-size:11px;color:var(--text);outline:none}
+.manual-input:focus{border-color:var(--navy)}
+.manual-add-btn{background:var(--navy);border:none;color:#fff;border-radius:7px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap}
+.manual-add-btn:hover{opacity:.85}
 
 /* ── TASK CARD ── */
 .task-card{border-radius:10px;padding:8px 10px;margin-bottom:6px;font-size:11px;position:relative;cursor:grab;user-select:none;transition:box-shadow .12s,transform .1s;border:1.5px solid}
@@ -876,10 +883,15 @@ function renderBrowseNodes(nodes,level,path){
     }
     const nodeId='bn_'+pathStr;const childId='bc_'+pathStr;
     const indent=['','padding-left:14px','padding-left:26px','padding-left:38px'][Math.min(level,3)];
-    return`<div class="browse-tree-node" data-level="${level}">
-      <div class="browse-tree-row" style="${indent}" onclick="toggleBrowseNode('${childId}','${nodeId}')">
-        <span class="btoggle${hasChildren?'':' invis'}" id="${nodeId}">▶</span>
-        <span class="blabel">${h(node.name)}</span>
+    // collect all leaf count under this node for badge
+    const tree2=browseCurrentTab==='common'?commonTree:(personalTree[teacher]||[]);
+    const allLeaves=collectLeaves(tree2,curPath);
+    const selCount=allLeaves.filter(l=>browseSelectedLeaves.some(s=>s.itemKey===l.itemKey)).length;
+    const badge=selCount>0?` <span style="background:var(--navy);color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700">${selCount}/${allLeaves.length}</span>`:'';
+    return`<div class="browse-tree-node" data-level="${level}" id="bnode_${pathStr}">
+      <div class="browse-tree-row" style="${indent}">
+        <span class="btoggle${hasChildren?'':' invis'}" id="${nodeId}" onclick="toggleBrowseNode('${childId}','${nodeId}',event)">▶</span>
+        <span class="blabel" style="cursor:pointer" onclick="toggleBrowseAll('${pathStr}')">${h(node.name)}${badge}</span>
       </div>
       <div class="browse-children" id="${childId}">
         ${hasChildren?renderBrowseNodes(node.children,level+1,curPath):''}
@@ -887,7 +899,47 @@ function renderBrowseNodes(nodes,level,path){
     </div>`;
   }).join('');
 }
-function toggleBrowseNode(childId,nodeId){
+
+// Collect all leaf items under a node path
+function collectLeaves(tree,path){
+  let node=tree[path[0]];for(let i=1;i<path.length;i++)node=node.children[path[i]];
+  const leaves=[];
+  function walk(n,p){
+    const isLeaf=(p.length-path.length+1>=5)||n.leaf===true;
+    // determine level
+    const level=p.length-1;
+    if((level===4)||n.leaf===true){
+      leaves.push({
+        itemKey:buildFullPathFromTree(tree,p),
+        leafName:n.name,
+        parentPath:buildParentPathFromTree(tree,p)
+      });
+    }else if(n.children){n.children.forEach((c,i)=>walk(c,[...p,i]));}
+  }
+  walk(node,path);
+  return leaves;
+}
+
+// Toggle all leaves under a node
+function toggleBrowseAll(pathStr){
+  const curPath=pathStr.split('-').map(Number);
+  const tree=browseCurrentTab==='common'?commonTree:(personalTree[teacher]||[]);
+  const allLeaves=collectLeaves(tree,curPath);
+  const allSel=allLeaves.every(l=>browseSelectedLeaves.some(s=>s.itemKey===l.itemKey));
+  if(allSel){
+    // deselect all
+    allLeaves.forEach(l=>{const idx=browseSelectedLeaves.findIndex(s=>s.itemKey===l.itemKey);if(idx!==-1)browseSelectedLeaves.splice(idx,1);});
+  }else{
+    // select all not yet selected
+    allLeaves.forEach(l=>{if(!browseSelectedLeaves.some(s=>s.itemKey===l.itemKey))browseSelectedLeaves.push(l);});
+  }
+  // re-render browse tree to update badges + checkmarks
+  renderBrowseTree(browseCurrentTab);
+  const cnt=browseSelectedLeaves.length;
+  document.getElementById('browseSelInfo').textContent=cnt>0?cnt+'개 선택됨 — 추가하기를 누르세요':'선택한 항목이 없습니다';
+}
+function toggleBrowseNode(childId,nodeId,e){
+  if(e)e.stopPropagation();
   const ch=document.getElementById(childId);const tg=document.getElementById(nodeId);
   if(!ch)return;const open=ch.classList.toggle('open');
   if(tg)tg.style.transform=open?'rotate(90deg)':'';
@@ -1185,6 +1237,7 @@ function renderDays(){
     const dayRows=allData.filter(r=>r.name===cur&&r.date===dateStr);
     const cards=dayRows.map(r=>renderCard(r)).join('');
     const hint=!dayRows.length?'<div class="drop-hint">드래그해서 추가</div>':'';
+    const manualBox=`<div class="manual-hint" onclick="showManualInput('${dateStr}',this)">✏️ 수기 입력</div>`;
     const typeLabel=isSelf?'자습':isOff?'휴일':isTest?'테스트':'';
     const dayMemo=getDayMemo(cur,dateStr);
     const testRange=isTest?getTestRange(cur,dateStr):'';
@@ -1193,7 +1246,7 @@ function renderDays(){
         <div class="d-dow">${DKR[dow]}${typeLabel?' <span class="day-type-badge badge-'+(isOff?'off':isSelf?'self':'test')+'">'+typeLabel+'</span>':''}</div>
         <div class="d-date">${d.getMonth()+1}/${d.getDate()}</div>
       </div>
-      <div class="day-body" id="db_${dateStr}" ondragover="ddOver(event,'${dateStr}')" ondragleave="ddLeave('${dateStr}')" ondrop="ddDrop(event,'${dateStr}')">${cards}${hint}</div>
+      <div class="day-body" id="db_${dateStr}" ondragover="ddOver(event,'${dateStr}')" ondragleave="ddLeave('${dateStr}')" ondrop="ddDrop(event,'${dateStr}')">${cards}${hint}${manualBox}</div>
       ${isTest?`<div class="test-range-box"><div class="test-range-label">📝 테스트 범위</div><textarea class="test-range-input" placeholder="예: 점프업 2강~6강" oninput="saveTestRange('${cur}','${dateStr}',this.value)">${h(testRange)}</textarea></div>`:''}
       <div class="day-memo-box"><textarea class="day-memo-input" placeholder="메모..." oninput="saveDayMemo('${cur}','${dateStr}',this.value)">${h(dayMemo)}</textarea></div>
     </div>`;
@@ -1258,7 +1311,22 @@ async function delCard(id,e){
 function openMemo(id,e){e.stopPropagation();const row=allData.find(r=>r.id===id);if(!row)return;editMemoRow=id;document.getElementById('fMemo').value=row.memo||'';openM('memoModal');setTimeout(()=>document.getElementById('fMemo').focus(),100);}
 async function saveMemoEdit(){const row=allData.find(r=>r.id===editMemoRow);if(!row)return;row.memo=document.getElementById('fMemo').value;closeM('memoModal');renderDays();if(typeof editMemoRow==='number')await dbUpdate(editMemoRow,{memo:row.memo});}
 
-// ── DAY MEMO / TEST RANGE ─────────────────────────────
+// ── MANUAL INPUT ──────────────────────────────────────
+function showManualInput(dateStr, el){
+  // Replace hint with input row
+  el.outerHTML=`<div class="manual-input-row" id="mi_${dateStr}">
+    <input class="manual-input" id="miText_${dateStr}" placeholder="강의명 입력..." maxlength="60"
+      onkeydown="if(event.key==='Enter')submitManual('${dateStr}')" autofocus>
+    <button class="manual-add-btn" onclick="submitManual('${dateStr}')">추가</button>
+  </div>`;
+  setTimeout(()=>document.getElementById('miText_'+dateStr)?.focus(),50);
+}
+async function submitManual(dateStr){
+  const inp=document.getElementById('miText_'+dateStr);if(!inp)return;
+  const val=inp.value.trim();if(!val){renderDays();return;}
+  const d=new Date(dateStr+'T00:00:00');const dow=DFULL[d.getDay()];
+  await addTask(dateStr,dow,val,'학습 대기','','');
+}
 function getDayMemo(student,dateStr){try{return localStorage.getItem('dm_'+teacher+'_'+student+'_'+dateStr)||'';}catch(e){return '';}}
 let dayMemoTimer=null;
 function saveDayMemo(student,dateStr,val){clearTimeout(dayMemoTimer);dayMemoTimer=setTimeout(()=>{try{const k='dm_'+teacher+'_'+student+'_'+dateStr;if(val.trim())localStorage.setItem(k,val);else localStorage.removeItem(k);}catch(e){}},400);}
