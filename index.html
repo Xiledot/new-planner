@@ -233,9 +233,9 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .tc-memo-add:hover{color:var(--navy)}
 
 /* ── SUBTASK BADGES ── */
-.subtask-badges{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}
-.st-badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;cursor:pointer;border:1.5px solid;transition:all .15s;user-select:none;white-space:nowrap}
-.st-badge:hover{opacity:.8;transform:scale(1.05)}
+.subtask-badges{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:6px}
+.st-badge{display:flex;align-items:center;justify-content:center;padding:5px 4px;border-radius:8px;font-size:10px;font-weight:700;cursor:pointer;border:1.5px solid;transition:all .15s;user-select:none;text-align:center;line-height:1.3}
+.st-badge:hover{opacity:.8;transform:scale(1.03)}
 .st-badge.st-대기{background:#f0f0f4;border-color:#c8c0b0;color:#6a7a8a}
 .st-badge.st-조정{background:#fff0e0;border-color:#e8a84a;color:#8a5010}
 .st-badge.st-완료{background:#e8f8ec;border-color:#6db87a;color:#1a6a2a}
@@ -901,11 +901,15 @@ function renderBrowseNodes(nodes,level,path){
     const tree2=browseCurrentTab==='common'?commonTree:(personalTree[teacher]||[]);
     const allLeaves=collectLeaves(tree2,curPath);
     const selCount=allLeaves.filter(l=>browseSelectedLeaves.some(s=>s.itemKey===l.itemKey)).length;
-    const badge=selCount>0?` <span style="background:var(--navy);color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700">${selCount}/${allLeaves.length}</span>`:'';
+    const allSel2=allLeaves.length>0&&selCount===allLeaves.length;
+    const badge=selCount>0?` <span style="background:var(--navy);color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:4px">${selCount}/${allLeaves.length}</span>`:'';
+    // show checkbox for select-all at leaf-parent level (level>=2)
+    const chkBox=level>=2?`<span onclick="toggleBrowseAll('${pathStr}',event)" style="cursor:pointer;display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border:2px solid ${allSel2?'var(--navy)':'var(--border)'};border-radius:4px;background:${allSel2?'var(--navy)':'var(--surface)'};flex-shrink:0;margin-right:4px;transition:all .12s">${allSel2?'<span style="color:#fff;font-size:9px;font-weight:900">✓</span>':''}</span>`:'';
     return`<div class="browse-tree-node" data-level="${level}" id="bnode_${pathStr}">
       <div class="browse-tree-row" style="${indent}">
         <span class="btoggle${hasChildren?'':' invis'}" id="${nodeId}" onclick="toggleBrowseNode('${childId}','${nodeId}',event)">▶</span>
-        <span class="blabel" style="cursor:pointer" onclick="toggleBrowseAll('${pathStr}')">${h(node.name)}${badge}</span>
+        ${chkBox}
+        <span class="blabel" style="cursor:pointer" onclick="toggleBrowseNode('${childId}','${nodeId}')">${h(node.name)}${badge}</span>
       </div>
       <div class="browse-children" id="${childId}">
         ${hasChildren?renderBrowseNodes(node.children,level+1,curPath):''}
@@ -935,7 +939,8 @@ function collectLeaves(tree,path){
 }
 
 // Toggle all leaves under a node
-function toggleBrowseAll(pathStr){
+function toggleBrowseAll(pathStr,e){
+  if(e)e.stopPropagation();
   const curPath=pathStr.split('-').map(Number);
   const tree=browseCurrentTab==='common'?commonTree:(personalTree[teacher]||[]);
   const allLeaves=collectLeaves(tree,curPath);
@@ -1296,7 +1301,12 @@ function renderCard(row){
   let pathEl='',titleText=row.task||'';
   if(row.path){
     const parts=row.path.split(' > ');
-    if(parts.length>=2){pathEl=`<div class="tc-path">${h(parts.slice(0,-1).join(' > '))}</div>`;titleText=parts[parts.length-1]+'  '+titleText;}
+    if(parts.length>=2){
+      pathEl=`<div class="tc-path">${h(parts.slice(0,-1).join(' > '))}</div>`;
+      // only prepend gang name if task name doesn't already match last path segment
+      const gangSeg=parts[parts.length-1];
+      if(titleText!==gangSeg) titleText=gangSeg+'  '+titleText;
+    }
     else pathEl=`<div class="tc-path">${h(row.path)}</div>`;
   }
   const memoEl=row.memo?`<div class="tc-memo" onclick="openMemo(${row.id},event)">📝 ${h(row.memo)}</div>`:`<div class="tc-memo-add" onclick="openMemo(${row.id},event)">＋ 메모</div>`;
