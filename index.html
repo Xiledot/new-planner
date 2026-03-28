@@ -239,7 +239,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .tc-del:hover{background:var(--c-불가-bg);color:var(--c-불가-t)}
 .tc-path{font-size:10px;color:var(--navy3);margin-bottom:2px;line-height:1.4;font-weight:600;opacity:.8}
 .tc-title{font-weight:700;color:var(--text);line-height:1.4;margin-bottom:6px;padding-right:14px;word-break:break-all;font-size:12px}
-.tc-status{width:100%;border:none;font-family:inherit;font-size:10px;font-weight:700;cursor:pointer;border-radius:6px;padding:4px 6px;outline:none;-webkit-appearance:none;appearance:none;text-align:center;display:block}
+.tc-status{width:100%;border:none;font-family:inherit;font-size:10px;font-weight:700;cursor:pointer;border-radius:6px;padding:6px;outline:none;-webkit-appearance:none;appearance:none;text-align:center;display:block;line-height:1}
 .task-card.s-완료 .tc-status{background:var(--c-완료-bb);color:#fff}
 .task-card.s-대기 .tc-status{background:var(--c-대기-bb);color:#fff}
 .task-card.s-조정 .tc-status{background:var(--c-조정-bb);color:#fff}
@@ -1577,13 +1577,35 @@ function buildAndCapture(days,titleText,mode,cols){
     else dayRows.forEach(row=>{
       const key=skKey(row.status);const card=document.createElement('div');card.className='snap-card';
       card.style.background=bgMap[key];card.style.borderColor=bdMap[key];
-      // wider cards: allow text to show fully without wrapping
       card.style.wordBreak='keep-all';card.style.whiteSpace='normal';
+      // Fix duplicate: same logic as renderCard
       let snapPath='',snapTitle=row.task||'';
-      if(row.path){const parts=row.path.split(' > ');if(parts.length>=2){snapPath=parts.slice(0,-1).join(' > ');snapTitle=parts[parts.length-1]+'  '+snapTitle;}else snapPath=row.path;}
+      if(row.path){
+        const parts=row.path.split(' > ');
+        if(parts.length>=2){
+          snapPath=parts.slice(0,-1).join(' > ');
+          const gangSeg=parts[parts.length-1];
+          if(snapTitle!==gangSeg) snapTitle=gangSeg+'  '+snapTitle;
+        }else snapPath=row.path;
+      }
+      // subtask badges in snapshot
+      const subs=Array.isArray(row.subtasks)?row.subtasks:[];
+      let subHtml='';
+      if(subs.length>0){
+        const stBgMap={대기:'#f0f0f4',조정:'#fff0e0',완료:'#e8f8ec'};
+        const stBdMap={대기:'#c8c0b0',조정:'#e8a84a',완료:'#6db87a'};
+        const stTxMap={대기:'#6a7a8a',조정:'#8a5010',완료:'#1a6a2a'};
+        subHtml='<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-bottom:5px">';
+        subs.forEach(st=>{
+          const sk=st.status&&st.status.includes('완료')?'완료':st.status&&st.status.includes('조정')?'조정':'대기';
+          subHtml+=`<span style="display:flex;align-items:center;justify-content:center;padding:4px 3px;border-radius:7px;font-size:9px;font-weight:700;border:1.5px solid ${stBdMap[sk]};background:${stBgMap[sk]};color:${stTxMap[sk]};text-align:center">${h(st.name)}</span>`;
+        });
+        subHtml+='</div>';
+      }
       card.innerHTML=(snapPath?'<div class="sc-path">'+h(snapPath)+'</div>':'')+
-        '<div class="sc-title" style="white-space:normal;word-break:keep-all">'+h(snapTitle)+'</div>'+
-        '<span class="sc-badge" style="background:'+bbMap[key]+'">'+( row.status||'학습 대기')+'</span>'+
+        '<div class="sc-title" style="white-space:normal;word-break:keep-all;margin-bottom:'+(subs.length?'5px':'3px')+'">'+h(snapTitle)+'</div>'+
+        subHtml+
+        '<span class="sc-badge" style="background:'+bbMap[key]+';display:block;text-align:center;padding:4px 8px;border-radius:6px">'+( row.status||'학습 대기')+'</span>'+
         (row.memo?'<div style="font-size:9px;color:#666;margin-top:3px">'+h(row.memo)+'</div>':'');
       body.appendChild(card);
     });
