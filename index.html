@@ -856,12 +856,14 @@ function renderLecPanel(){
     html+=`<div class="pinned-list">`;
     folderOrder.forEach(fk=>{
       const {label,items}=folders[fk];
+      const folderIndices=items.map(x=>x.i);
       const fId='pf_'+fk.replace(/[^a-zA-Z0-9]/g,'_');
       html+=`<div class="pinned-folder">
-        <div class="pinned-folder-hdr" onclick="togglePinnedFolder('${fId}')">
-          <span class="pinned-folder-arrow" id="arr_${fId}">▶</span>
-          <span class="pinned-folder-name">${h(label)}</span>
+        <div class="pinned-folder-hdr">
+          <span class="pinned-folder-arrow" id="arr_${fId}" onclick="togglePinnedFolder('${fId}')" style="cursor:pointer;padding:2px 4px">▶</span>
+          <span class="pinned-folder-name" onclick="togglePinnedFolder('${fId}')" style="cursor:pointer;flex:1">${h(label)}</span>
           <span class="pinned-folder-count">${items.length}</span>
+          <button onclick="removePinnedFolder([${folderIndices}])" style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:2px 6px;border-radius:4px;margin-left:4px" title="전체 삭제">✕</button>
         </div>
         <div class="pinned-folder-body" id="${fId}">`;
       items.forEach(({item,i})=>{
@@ -929,6 +931,12 @@ function removePinned(i,e){
   if(e)e.stopPropagation();
   const p=getPinned();p.splice(i,1);pinnedSel.clear();savePinned();renderLecPanel();
 }
+function removePinnedFolder(indices){
+  // remove in reverse order so indices don't shift
+  const p=getPinned();
+  [...indices].sort((a,b)=>b-a).forEach(i=>p.splice(i,1));
+  pinnedSel.clear();savePinned();renderLecPanel();
+}
 
 // ── BROWSE MODAL ─────────────────────────────────────
 function openBrowseModal(){
@@ -972,8 +980,9 @@ function renderBrowseNodes(nodes,level,path){
       const fullPath=buildFullPathFromTree(tree,curPath);
       const parentPath=buildParentPathFromTree(tree,curPath);
       const isSel=browseSelectedLeaves.some(l=>l.itemKey===fullPath);
+      const isSimpleLeaf=node.leaf===true; // explicitly marked leaf = individual item
       return`<div class="browse-leaf${isSel?' selected':''}" data-key="${h(fullPath)}"
-        onclick="toggleBrowseLeaf('${esc(fullPath)}','${esc(node.name)}','${esc(parentPath)}')">
+        onclick="toggleBrowseLeaf('${esc(fullPath)}','${esc(node.name)}','${esc(parentPath)}',${isSimpleLeaf})">
         <div class="browse-cb"></div>
         <div class="browse-leaf-name">${h(node.name)}</div>
       </div>`;
@@ -1013,7 +1022,8 @@ function collectLeaves(tree,path){
       leaves.push({
         itemKey:buildFullPathFromTree(tree,p),
         leafName:n.name,
-        parentPath:buildParentPathFromTree(tree,p)
+        parentPath:buildParentPathFromTree(tree,p),
+        _isSimpleLeaf:n.leaf===true
       });
     }else if(n.children){n.children.forEach((c,i)=>walk(c,[...p,i]));}
   }
@@ -1046,9 +1056,9 @@ function toggleBrowseNode(childId,nodeId,e){
   if(!ch)return;const open=ch.classList.toggle('open');
   if(tg)tg.style.transform=open?'rotate(90deg)':'';
 }
-function toggleBrowseLeaf(fullPath,leafName,parentPath){
+function toggleBrowseLeaf(fullPath,leafName,parentPath,isSimpleLeaf){
   const idx=browseSelectedLeaves.findIndex(l=>l.itemKey===fullPath);
-  if(idx===-1)browseSelectedLeaves.push({itemKey:fullPath,leafName,parentPath});
+  if(idx===-1)browseSelectedLeaves.push({itemKey:fullPath,leafName,parentPath,_isSimpleLeaf:!!isSimpleLeaf});
   else browseSelectedLeaves.splice(idx,1);
   document.querySelectorAll('.browse-leaf').forEach(el=>{
     if(el.dataset.key===fullPath)el.classList.toggle('selected',browseSelectedLeaves.some(l=>l.itemKey===fullPath));
@@ -1068,18 +1078,35 @@ function confirmBrowseAdd(){
     groups[gKey].leaves.push(l.leafName);
   });
 
-  Object.values(groups).forEach(g=>{
-    // Get the gang name from parentPath last segment
+  // Check if a leaf is a "simple" leaf (leaf:true node) = should be individual
+  // vs a "sub-item" leaf (level 4 auto-leaf) = should be grouped as subtasks
+  const simpleLeafKeys=new Set(
+    browseSelectedLeaves.filter(l=>l._isSimpleLeaf).map(l=>l.itemKey)
+  );
+
+  // Simple leaves = individual pinned items (no grouping)
+  browseSelectedLeaves.filter(l=>l._isSimpleLeaf).forEach(l=>{
+    if(!pinned.some(p=>p.gangName===l.leafName&&p.parentPath===l.parentPath)){
+      pinned.push({gangName:l.leafName,parentPath:l.parentPath,pathForCard:'',subtasks:null});
+    }
+  });
+
+  // Group remaining (level-4 auto leaves) by parentPath for subtask cards
+  const subGroups={};
+  browseSelectedLeaves.filter(l=>!l._isSimpleLeaf).forEach(l=>{
+    const gKey=l.parentPath||l.leafName;
+    if(!subGroups[gKey])subGroups[gKey]={parentPath:l.parentPath,leaves:[]};
+    subGroups[gKey].leaves.push(l.leafName);
+  });
+  Object.values(subGroups).forEach(g=>{
     const parts=(g.parentPath||'').split(' > ');
     const gangName=parts[parts.length-1]||g.leaves[0];
-    const pathForCard=parts.slice(0,-1).join(' > '); // path above gang
+    const pathForCard=parts.slice(0,-1).join(' > ');
     if(g.leaves.length===1){
-      // single leaf — no subtasks
       if(!pinned.some(p=>p.gangName===gangName&&p.parentPath===g.parentPath&&!p.subtasks)){
         pinned.push({gangName,parentPath:g.parentPath,pathForCard,subtasks:null});
       }
     }else{
-      // multiple leaves = subtask card
       if(!pinned.some(p=>p.gangName===gangName&&p.parentPath===g.parentPath)){
         pinned.push({gangName,parentPath:g.parentPath,pathForCard,subtasks:g.leaves.map(name=>({name,status:'대기'}))});
       }
