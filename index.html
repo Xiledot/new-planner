@@ -232,6 +232,14 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .task-card:hover .tc-memo-add{opacity:1}
 .tc-memo-add:hover{color:var(--navy)}
 
+/* ── SUBTASK BADGES ── */
+.subtask-badges{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}
+.st-badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;cursor:pointer;border:1.5px solid;transition:all .15s;user-select:none;white-space:nowrap}
+.st-badge:hover{opacity:.8;transform:scale(1.05)}
+.st-badge.st-대기{background:#f0f0f4;border-color:#c8c0b0;color:#6a7a8a}
+.st-badge.st-조정{background:#fff0e0;border-color:#e8a84a;color:#8a5010}
+.st-badge.st-완료{background:#e8f8ec;border-color:#6db87a;color:#1a6a2a}
+
 /* day bottom areas */
 .test-range-box{padding:5px 8px;border-top:1px solid #c0a0e0;flex-shrink:0;background:rgba(168,126,212,.08)}
 .test-range-label{font-size:9px;font-weight:700;color:#7a4eb8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
@@ -811,14 +819,20 @@ function renderLecPanel(){
   }else{
     html+=`<div class="pinned-list">`;
     pinned.forEach((item,i)=>{
-      const parts=item.parentPath?item.parentPath.split(' > '):[];
-      const sub=parts.length>0?parts[parts.length-1]:'';
+      const displayName=item.gangName||item.leafName||'';
+      const pathStr=item.parentPath||'';
+      const parts=pathStr.split(' > ');
+      const sub=parts.length>1?parts[parts.length-2]:'';
+      const hasSubs=Array.isArray(item.subtasks)&&item.subtasks.length>0;
+      const subNames=hasSubs?item.subtasks.map(s=>s.name).join(' · '):'';
+      const subsJson=hasSubs?encodeURIComponent(JSON.stringify(item.subtasks)):'';
       html+=`<div class="pinned-item" draggable="true"
-        ondragstart="ldStart(event,'${esc(item.leafName)}','${esc(item.parentPath||'')}')"
+        ondragstart="ldStart(event,'${esc(displayName)}','${esc(pathStr)}','${subsJson}')"
         ondragend="ldEnd(event)">
-        <div style="flex:1">
-          ${sub?`<div class="pinned-item-sub">${h(sub)}</div>`:''}
-          <div class="pinned-item-name">${h(item.leafName)}</div>
+        <div style="flex:1;min-width:0">
+          ${sub?`<div class="pinned-item-sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${h(sub)}</div>`:''}
+          <div class="pinned-item-name">${h(displayName)}</div>
+          ${hasSubs?`<div style="font-size:9px;color:var(--text3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${h(subNames)}</div>`:''}
         </div>
         <button class="pinned-del" onclick="removePinned(${i})" title="제거">✕</button>
       </div>`;
@@ -957,15 +971,35 @@ function toggleBrowseLeaf(fullPath,leafName,parentPath){
 function confirmBrowseAdd(){
   if(!browseSelectedLeaves.length){toast('선택된 항목이 없습니다','error');return;}
   const pinned=getPinned();
+
+  // Group leaves by parentPath — same parentPath = same gang card
+  const groups={};
   browseSelectedLeaves.forEach(l=>{
-    if(!pinned.some(p=>p.leafName===l.leafName&&p.parentPath===l.parentPath)){
-      pinned.push({leafName:l.leafName,parentPath:l.parentPath});
+    const gKey=l.parentPath||l.leafName;
+    if(!groups[gKey])groups[gKey]={parentPath:l.parentPath,leaves:[]};
+    groups[gKey].leaves.push(l.leafName);
+  });
+
+  Object.values(groups).forEach(g=>{
+    // Get the gang name from parentPath last segment
+    const parts=(g.parentPath||'').split(' > ');
+    const gangName=parts[parts.length-1]||g.leaves[0];
+    const pathForCard=parts.slice(0,-1).join(' > '); // path above gang
+    if(g.leaves.length===1){
+      // single leaf — no subtasks
+      if(!pinned.some(p=>p.gangName===gangName&&p.parentPath===g.parentPath&&!p.subtasks)){
+        pinned.push({gangName,parentPath:g.parentPath,pathForCard,subtasks:null});
+      }
+    }else{
+      // multiple leaves = subtask card
+      if(!pinned.some(p=>p.gangName===gangName&&p.parentPath===g.parentPath)){
+        pinned.push({gangName,parentPath:g.parentPath,pathForCard,subtasks:g.leaves.map(name=>({name,status:'대기'}))});
+      }
     }
   });
-  savePinned();closeM('browseModal');
-  browseSelectedLeaves=[];
+
+  savePinned();closeM('browseModal');browseSelectedLeaves=[];
   renderLecPanel();
-  toast(browseSelectedLeaves.length||'강의 추가됨','success');
   toast('강의가 추가됐어요! 날짜 칸으로 드래그하세요','success');
 }
 
@@ -1220,7 +1254,10 @@ async function confirmAssign(){
 }
 
 // ── LEAF DRAG ─────────────────────────────────────────
-function ldStart(e,leafName,parentPath){dLec={leafName,parentPath};dCard=null;e.dataTransfer.effectAllowed='copy';e.stopPropagation();}
+function ldStart(e,leafName,parentPath,subsEncoded){
+  const subtasks=subsEncoded?JSON.parse(decodeURIComponent(subsEncoded)):null;
+  dLec={leafName,parentPath,subtasks};dCard=null;e.dataTransfer.effectAllowed='copy';e.stopPropagation();
+}
 function ldEnd(){dLec=null;}
 
 // ── DAYS ──────────────────────────────────────────────
@@ -1263,11 +1300,27 @@ function renderCard(row){
     else pathEl=`<div class="tc-path">${h(row.path)}</div>`;
   }
   const memoEl=row.memo?`<div class="tc-memo" onclick="openMemo(${row.id},event)">📝 ${h(row.memo)}</div>`:`<div class="tc-memo-add" onclick="openMemo(${row.id},event)">＋ 메모</div>`;
+
+  // subtask badges
+  const subs=Array.isArray(row.subtasks)?row.subtasks:[];
+  const hasSubs=subs.length>0;
+  let subEl='';
+  if(hasSubs){
+    const badges=subs.map((st,i)=>
+      `<span class="st-badge st-${skKey(st.status)||'대기'}" onclick="cycleSubtask(${row.id},${i},event)" title="${h(st.name)}">${h(st.name)}</span>`
+    ).join('');
+    subEl=`<div class="subtask-badges">${badges}</div>`;
+  }
+  const statusRow=hasSubs
+    ?`<select class="tc-status" onchange="chStatus(${row.id},this)" onclick="event.stopPropagation()">${opts}</select>`
+    :`<select class="tc-status" onchange="chStatus(${row.id},this)" onclick="event.stopPropagation()">${opts}</select>`;
+
   return`<div class="task-card s-${key}" draggable="true" ondragstart="cdStart(event,${row.id},'${esc(row.date||'')}')" ondragend="cdEnd(event)">
     <button class="tc-del" onclick="delCard(${row.id},event)">✕</button>
     ${pathEl}
     <div class="tc-title">${h(titleText)}</div>
-    <select class="tc-status" onchange="chStatus(${row.id},this)" onclick="event.stopPropagation()">${opts}</select>
+    ${subEl}
+    ${statusRow}
     ${memoEl}
   </div>`;
 }
@@ -1281,25 +1334,52 @@ async function ddDrop(e,dateStr){
   e.preventDefault();document.getElementById('db_'+dateStr)?.classList.remove('drag-over');
   if(dLec){
     const d=new Date(dateStr+'T00:00:00');const dow=DFULL[d.getDay()];
-    await addTask(dateStr,dow,dLec.leafName,'학습 대기','',dLec.parentPath||'');
+    await addTask(dateStr,dow,dLec.leafName,'학습 대기','',dLec.parentPath||'',dLec.subtasks||null);
     dLec=null;
   }else if(dCard){
     if(dCard.dateStr!==dateStr){const d=new Date(dateStr+'T00:00:00');await moveTask(dCard.id,dateStr,DFULL[d.getDay()]);}
     dCard=null;
   }
 }
-async function addTask(dateStr,dow,taskName,status,memo,pathLabel){
-  const row={teacher,name:cur,date:dateStr,dow,task:taskName,status,memo:memo||'',path:pathLabel||''};
+async function addTask(dateStr,dow,taskName,status,memo,pathLabel,subtasks){
+  const subs=subtasks||[];
+  const row={teacher,name:cur,date:dateStr,dow,task:taskName,status,memo:memo||'',path:pathLabel||'',subtasks:subs};
   const tmpId='tmp_'+Date.now()+'_'+Math.random();
   allData.push({...row,id:tmpId});renderDays();renderSidebar();
   const saved=await dbInsert(row);
-  if(saved){const idx=allData.findIndex(r=>r.id===tmpId);if(idx!==-1)allData[idx]={...saved,path:saved.path||pathLabel||''};renderDays();renderSidebar();}
+  if(saved){const idx=allData.findIndex(r=>r.id===tmpId);if(idx!==-1)allData[idx]={...saved,path:saved.path||pathLabel||'',subtasks:saved.subtasks||subs};renderDays();renderSidebar();}
 }
 async function moveTask(id,newDate,newDow){const row=allData.find(r=>r.id===id);if(!row)return;row.date=newDate;row.dow=newDow;renderDays();await dbUpdate(id,{date:newDate,dow:newDow});}
 async function chStatus(id,sel){
-  const val=sel.value;const row=allData.find(r=>r.id===id);if(!row)return;row.status=val;
-  const card=sel.closest('.task-card');if(card)card.className='task-card s-'+skKey(val);
-  renderSidebar();await dbUpdate(id,{status:val});
+  const val=sel.value;const row=allData.find(r=>r.id===id);if(!row)return;
+  row.status=val;
+  // if has subtasks, set all to matching state
+  if(Array.isArray(row.subtasks)&&row.subtasks.length){
+    const stStatus=val==='학습 완료'?'완료':val==='조정 필요'?'조정':'대기';
+    row.subtasks=row.subtasks.map(s=>({...s,status:stStatus}));
+    await dbUpdate(id,{status:val,subtasks:row.subtasks});
+  }else{
+    await dbUpdate(id,{status:val});
+  }
+  renderDays();renderSidebar();
+}
+
+async function cycleSubtask(id,idx,e){
+  e.stopPropagation();
+  const row=allData.find(r=>r.id===id);if(!row||!Array.isArray(row.subtasks))return;
+  const cycle=['대기','조정','완료'];
+  const cur2=row.subtasks[idx].status||'대기';
+  const curKey=cur2.includes('완료')?'완료':cur2.includes('조정')?'조정':'대기';
+  const next=cycle[(cycle.indexOf(curKey)+1)%3];
+  row.subtasks[idx].status=next;
+  // check if all done
+  const allDone=row.subtasks.every(s=>(s.status||'대기')==='완료');
+  const anyNotDone=row.subtasks.some(s=>(s.status||'대기')!=='완료');
+  const anyAdjust=row.subtasks.some(s=>(s.status||'대기')==='조정');
+  const newStatus=allDone?'학습 완료':anyAdjust?'조정 필요':'학습 대기';
+  row.status=newStatus;
+  await dbUpdate(id,{status:newStatus,subtasks:row.subtasks});
+  renderDays();renderSidebar();
 }
 async function delCard(id,e){
   e.stopPropagation();if(!confirm('삭제할까요?'))return;
@@ -1363,12 +1443,24 @@ function saveDow(){saveLocalSettings();closeM('dowModal');renderMain();toast('�
 function captureToday(){const d=new Date();buildAndCapture([{date:d,dateStr:ds(d)}],cur+' — '+(d.getMonth()+1)+'/'+d.getDate()+' 당일','single',1);}
 function captureWeek(){
   const cfg=settings[cur]||{startDow:1,dayTypes:getDT()};const dayTypes=cfg.dayTypes||getDT();const wDs=weekDates(cfg.startDow);
-  const vis=hideOff?wDs.filter(d=>(dayTypes[d.getDay()]||'class')!=='off'):wDs;
+  let vis=hideOff?wDs.filter(d=>(dayTypes[d.getDay()]||'class')!=='off'):wDs;
+  // exclude days with no cards AND no memo AND no test range
+  vis=vis.filter(d=>{
+    const dateStr=ds(d);
+    const hasCards=allData.some(r=>r.name===cur&&r.date===dateStr);
+    const hasMemo=!!getDayMemo(cur,dateStr);
+    const hasRange=!!getTestRange(cur,dateStr);
+    return hasCards||hasMemo||hasRange;
+  });
+  if(!vis.length){toast('이번 주에 내용이 없어요','error');return;}
   buildAndCapture(vis.map(d=>({date:d,dateStr:ds(d)})),cur+' — 주간 플래너','week',vis.length);
 }
 function buildAndCapture(days,titleText,mode,cols){
   const todayStr=ds(new Date());const numCols=cols||(mode==='single'?1:days.length);
-  const wrap=document.createElement('div');wrap.className='snap-wrap';wrap.style.width=(mode==='single'?340:Math.max(340,numCols*160))+'px';
+  // wider columns so text doesn't wrap: 220px per col
+  const colW=mode==='single'?360:220;
+  const totalW=mode==='single'?360:Math.max(360,numCols*colW);
+  const wrap=document.createElement('div');wrap.className='snap-wrap';wrap.style.width=totalW+'px';
   const te=document.createElement('div');te.className='snap-title';te.innerHTML='📚 <span>'+titleText+'</span>';wrap.appendChild(te);
   const grid=document.createElement('div');grid.className='snap-grid';grid.style.gridTemplateColumns='repeat('+numCols+',1fr)';wrap.appendChild(grid);
   const bgMap={완료:'#eaf4ec',대기:'#f5f3ef',조정:'#fef3e6',테스트:'#f0eaf8',불가:'#faeaea'};
@@ -1385,10 +1477,12 @@ function buildAndCapture(days,titleText,mode,cols){
     else dayRows.forEach(row=>{
       const key=skKey(row.status);const card=document.createElement('div');card.className='snap-card';
       card.style.background=bgMap[key];card.style.borderColor=bdMap[key];
+      // wider cards: allow text to show fully without wrapping
+      card.style.wordBreak='keep-all';card.style.whiteSpace='normal';
       let snapPath='',snapTitle=row.task||'';
       if(row.path){const parts=row.path.split(' > ');if(parts.length>=2){snapPath=parts.slice(0,-1).join(' > ');snapTitle=parts[parts.length-1]+'  '+snapTitle;}else snapPath=row.path;}
       card.innerHTML=(snapPath?'<div class="sc-path">'+h(snapPath)+'</div>':'')+
-        '<div class="sc-title">'+h(snapTitle)+'</div>'+
+        '<div class="sc-title" style="white-space:normal;word-break:keep-all">'+h(snapTitle)+'</div>'+
         '<span class="sc-badge" style="background:'+bbMap[key]+'">'+( row.status||'학습 대기')+'</span>'+
         (row.memo?'<div style="font-size:9px;color:#666;margin-top:3px">'+h(row.memo)+'</div>':'');
       body.appendChild(card);
@@ -1399,7 +1493,7 @@ function buildAndCapture(days,titleText,mode,cols){
     grid.appendChild(col);
   });
   document.body.appendChild(wrap);toast('이미지 생성 중...','info');
-  html2canvas(wrap,{scale:2,useCORS:true,backgroundColor:'#f5f0e8',logging:false}).then(canvas=>{
+  html2canvas(wrap,{scale:3,useCORS:true,backgroundColor:'#f5f0e8',logging:false}).then(canvas=>{
     document.body.removeChild(wrap);exportDataUrl=canvas.toDataURL('image/png');canvas.toBlob(blob=>{exportBlob=blob;},'image/png');
     document.getElementById('exportImg').src=exportDataUrl;document.getElementById('exportPreview').classList.remove('hidden');
   }).catch(()=>{if(document.body.contains(wrap))document.body.removeChild(wrap);toast('이미지 생성 실패','error');});
