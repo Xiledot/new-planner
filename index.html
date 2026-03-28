@@ -830,6 +830,7 @@ function renderLecPanel(){
   let html=`<div class="lec-add-row">
     <button class="lec-add-btn" onclick="openBrowseModal()">＋ 강의 선택</button>
     ${canEdit?`<button class="lec-edit-btn" onclick="openTreeEditModal()" title="목록 편집">✏️</button>`:''}
+    ${pinned.length>0?`<button onclick="clearAllPinned()" style="background:transparent;border:1px solid var(--border);color:var(--text3);border-radius:8px;padding:5px 8px;font-size:11px;cursor:pointer;font-family:inherit" title="핀 전체 삭제">🗑️</button>`:''}
   </div>`;
 
   if(!pinned.length){
@@ -1087,33 +1088,24 @@ function confirmBrowseAdd(){
   if(!browseSelectedLeaves.length){toast('선택된 항목이 없습니다','error');return;}
   const pinned=getPinned();
 
-  // Group leaves by parentPath — same parentPath = same gang card
-  const groups={};
-  browseSelectedLeaves.forEach(l=>{
-    const gKey=l.parentPath||l.leafName;
-    if(!groups[gKey])groups[gKey]={parentPath:l.parentPath,leaves:[]};
-    groups[gKey].leaves.push(l.leafName);
-  });
+  // Separate: leaf:true nodes → always individual cards
+  //           level-4 auto-leaves → group by parentPath as subtask cards
+  const simple=browseSelectedLeaves.filter(l=>l._isSimpleLeaf);
+  const grouped=browseSelectedLeaves.filter(l=>!l._isSimpleLeaf);
 
-  // Check if a leaf is a "simple" leaf (leaf:true node) = should be individual
-  // vs a "sub-item" leaf (level 4 auto-leaf) = should be grouped as subtasks
-  const simpleLeafKeys=new Set(
-    browseSelectedLeaves.filter(l=>l._isSimpleLeaf).map(l=>l.itemKey)
-  );
-
-  // Simple leaves = individual pinned items (no grouping)
-  browseSelectedLeaves.filter(l=>l._isSimpleLeaf).forEach(l=>{
-    if(!pinned.some(p=>p.gangName===l.leafName&&p.parentPath===l.parentPath)){
+  // 1) Simple leaf:true items — each becomes its own pinned item
+  simple.forEach(l=>{
+    if(!pinned.some(p=>p.gangName===l.leafName&&p.parentPath===l.parentPath&&!p.subtasks)){
       pinned.push({gangName:l.leafName,parentPath:l.parentPath,pathForCard:'',subtasks:null});
     }
   });
 
-  // Group remaining (level-4 auto leaves) by parentPath for subtask cards
+  // 2) Auto-leaf items — group by parentPath, multiple = subtask card
   const subGroups={};
-  browseSelectedLeaves.filter(l=>!l._isSimpleLeaf).forEach(l=>{
-    const gKey=l.parentPath||l.leafName;
-    if(!subGroups[gKey])subGroups[gKey]={parentPath:l.parentPath,leaves:[]};
-    subGroups[gKey].leaves.push(l.leafName);
+  grouped.forEach(l=>{
+    const key=l.parentPath||l.leafName;
+    if(!subGroups[key])subGroups[key]={parentPath:l.parentPath,leaves:[]};
+    subGroups[key].leaves.push(l.leafName);
   });
   Object.values(subGroups).forEach(g=>{
     const parts=(g.parentPath||'').split(' > ');
