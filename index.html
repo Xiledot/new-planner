@@ -37,6 +37,84 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;transition:background .2s,color .2s}
 
+/* ── DASHBOARD ── */
+.dashboard{padding:28px;max-width:1200px;margin:0 auto}
+.db-header{display:flex;align-items:baseline;gap:16px;margin-bottom:24px;flex-wrap:wrap}
+.db-title{font-family:"Noto Serif KR",serif;font-size:24px;font-weight:700;color:var(--navy)}
+.db-date{font-size:13px;color:var(--text3)}
+.db-actions{margin-left:auto;display:flex;gap:8px}
+.db-btn{background:var(--surface);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:7px 16px;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .12s;display:flex;align-items:center;gap:5px}
+.db-btn:hover{background:var(--navy);color:#fff;border-color:var(--navy)}
+.db-btn.primary{background:var(--navy);color:#fff;border-color:var(--navy)}
+.db-btn.primary:hover{opacity:.85}
+.db-section{margin-bottom:28px}
+.db-section-title{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.db-section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.db-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.db-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--sh);cursor:pointer;transition:all .15s}
+.db-card:hover{transform:translateY(-2px);box-shadow:var(--sh2);border-color:var(--navy)}
+.db-card-hdr{padding:12px 14px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.db-card-av{width:32px;height:32px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-family:"Noto Serif KR",serif;font-size:14px;font-weight:700;flex-shrink:0}
+.db-card-name{font-weight:700;color:var(--navy);font-size:14px}
+.db-card-stats{font-size:10px;color:var(--text3);margin-top:1px}
+.db-card-body{padding:10px 14px 12px}
+.db-task{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--surface2);font-size:12px}
+.db-task:last-child{border-bottom:none}
+.db-task-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.db-task-name{flex:1;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.db-task-badge{font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px;flex-shrink:0}
+.db-empty{font-size:12px;color:var(--text3);text-align:center;padding:12px 0}
+.db-self-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:#fff8e1;border:1px solid #e8c06a;border-radius:20px;font-size:12px;font-weight:600;color:#7a5000;cursor:pointer;transition:all .12s}
+.db-self-chip:hover{background:#fde88a}
+.db-self-wrap{display:flex;flex-wrap:wrap;gap:8px}
+
+/* ── QUICK TASK POPUP ── */
+.qt-overlay{position:fixed;inset:0;background:rgba(26,39,68,.45);z-index:250;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity .2s}
+.qt-overlay.open{opacity:1;pointer-events:all}
+.qt-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;width:380px;max-width:95vw;box-shadow:var(--sh2);transform:translateY(10px);transition:transform .2s;max-height:80vh;display:flex;flex-direction:column}
+.qt-overlay.open .qt-box{transform:translateY(0)}
+.qt-header{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-shrink:0}
+.qt-av{width:36px;height:36px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-family:"Noto Serif KR",serif;font-size:16px;font-weight:700;flex-shrink:0}
+.qt-name{font-family:"Noto Serif KR",serif;font-size:16px;font-weight:700;color:var(--navy);flex:1}
+.qt-close{background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:18px;padding:2px 6px;border-radius:6px}
+.qt-close:hover{color:var(--red);background:var(--surface2)}
+.qt-list{overflow-y:auto;flex:1}
+.qt-item{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--surface2);cursor:pointer;transition:background .1s;border-radius:8px}
+.qt-item:hover{background:var(--surface2)}
+.qt-item:last-child{border-bottom:none}
+.qt-check{width:22px;height:22px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;font-size:11px;font-weight:700}
+.qt-check.done{background:#2d8c3e;border-color:#2d8c3e;color:#fff}
+.qt-check.adjust{background:#d4882a;border-color:#d4882a;color:#fff}
+.qt-check.pending{background:var(--surface3);border-color:var(--border);color:var(--text3)}
+.qt-item-info{flex:1;min-width:0}
+.qt-item-name{font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qt-item-sub{font-size:10px;color:var(--text3);margin-top:1px}
+.qt-item-status{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;flex-shrink:0}
+.qt-footer{margin-top:14px;display:flex;gap:8px;justify-content:flex-end;flex-shrink:0;border-top:1px solid var(--border);padding-top:12px}
+
+/* ── PRINT RANGE MODAL ── */
+.date-range-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.date-range-row input[type=date]{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-family:inherit;font-size:13px;outline:none}
+.date-range-row input[type=date]:focus{border-color:var(--navy)}
+
+/* ── PRINT STYLES ── */
+@media print{
+  body{background:#fff!important;font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif}
+  .topbar,.sidebar,.no-print{display:none!important}
+  .print-area{display:block!important}
+  .print-page{padding:20mm;max-width:210mm;margin:0 auto}
+  .print-title{font-size:16pt;font-weight:700;margin-bottom:4mm;border-bottom:2px solid #000;padding-bottom:3mm}
+  .print-sub{font-size:10pt;color:#666;margin-bottom:6mm}
+  .print-table{width:100%;border-collapse:collapse;font-size:9pt}
+  .print-table th{background:#f0f0f0;border:1px solid #000;padding:3mm 4mm;text-align:left;font-weight:700}
+  .print-table td{border:1px solid #999;padding:2.5mm 4mm;vertical-align:top}
+  .print-table tr:nth-child(even) td{background:#fafafa}
+  .print-section{margin-bottom:8mm}
+  .print-section-title{font-size:11pt;font-weight:700;margin-bottom:3mm;border-left:3px solid #000;padding-left:3mm}
+  .page-break{page-break-before:always}
+}
+.print-area{display:none}
+
 /* ── GRID BACKGROUND ── */
 body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:40px 40px;opacity:.3;pointer-events:none;z-index:0}
 #appWrap,#loginWrap{position:relative;z-index:1}
@@ -421,12 +499,19 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     <div class="spacer"></div>
     <div class="save-indicator" id="saveIndicator">✓ 저장됨</div>
     <span class="sync-info" id="syncInfo"></span>
+    <button class="tbtn" onclick="showDashboard()" id="dashBtn">🏠 대시보드</button>
     <button class="tbtn" id="hideOffBtn" onclick="toggleHideOff()">🗓️ 휴일 숨기기</button>
     <button class="tbtn" onclick="syncAll()">🔄 동기화</button>
     <button class="tbtn" onclick="toggleTheme()" id="themeBtn">🌙 다크</button>
     <button class="tbtn" onclick="doLogout()">로그아웃</button>
   </div>
-  <div class="layout">
+  <!-- DASHBOARD -->
+  <div id="dashArea" style="display:none;overflow-y:auto;height:calc(100vh - 52px)"></div>
+
+  <!-- PRINT AREA -->
+  <div class="print-area" id="printArea"></div>
+
+  <div class="layout" id="plannerLayout" style="display:none">
     <div class="sidebar">
       <div class="slabel">학생</div>
       <div id="stuList"></div>
@@ -435,6 +520,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     <div class="main" id="mainArea">
       <div class="empty"><div class="empty-icon">👈</div><p>학생을 선택하세요</p></div>
     </div>
+  </div>
   </div>
 </div>
 
@@ -595,6 +681,46 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   </div>
 </div>
 
+<!-- QUICK TASK POPUP -->
+<div class="qt-overlay" id="qtOverlay" onclick="closeQT(event)">
+  <div class="qt-box">
+    <div class="qt-header">
+      <div class="qt-av" id="qtAv"></div>
+      <div class="qt-name" id="qtName"></div>
+      <button class="qt-close" onclick="document.getElementById('qtOverlay').classList.remove('open')">✕</button>
+    </div>
+    <div class="qt-list" id="qtList"></div>
+    <div class="qt-footer">
+      <button class="bcancl" onclick="document.getElementById('qtOverlay').classList.remove('open')">닫기</button>
+      <button class="bsave" onclick="goToStudentPlanner()">플래너로 이동 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- PRINT RANGE MODAL -->
+<div class="moverlay" id="printRangeModal" onclick="closeMO('printRangeModal',event)">
+  <div class="modal">
+    <h2>📄 주간 출력 설정</h2>
+    <p class="modal-sub">출력할 날짜 범위를 선택하세요</p>
+    <div class="frow">
+      <label>날짜 범위</label>
+      <div class="date-range-row">
+        <input type="date" id="printDateFrom">
+        <span style="color:var(--text3)">~</span>
+        <input type="date" id="printDateTo">
+      </div>
+    </div>
+    <div class="frow">
+      <label>학생 선택</label>
+      <div id="printStudentSel" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px"></div>
+    </div>
+    <div class="mactions">
+      <button class="bcancl" onclick="closeM('printRangeModal')">취소</button>
+      <button class="bsave" onclick="executePrintWeek()">출력하기</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -678,7 +804,10 @@ function doLogin(){
   document.getElementById('loginWrap').style.display='none';
   document.getElementById('appWrap').style.display='block';
   document.getElementById('teacherBadge').textContent=teacher;
-  loadLocalSettings();syncAll();
+  loadLocalSettings();
+  syncAll().then(()=>{
+    showDashboard();
+  });
 }
 function doLogout(){
   teacher=null;allData=[];students=[];cur=null;selectedLeaves=[];browseSelectedLeaves=[];
@@ -744,7 +873,11 @@ function renderSidebar(){
       <span class="av">${n[0]}</span>${n}<span class="sc">${done}/${rows.length}</span></button>`;
   }).join('');
 }
-function selStu(n){cur=n;wOff=0;selectedLeaves=[];browseSelectedLeaves=[];renderSidebar();renderMain();}
+function selStu(n){
+  cur=n;wOff=0;selectedLeaves=[];browseSelectedLeaves=[];
+  showPlanner();
+  renderSidebar();renderMain();
+}
 function addStudent(){
   const n=prompt('학생 이름:')?.trim();if(!n)return;
   if(students.includes(n)){toast('이미 있는 학생입니다','error');return;}
@@ -1677,6 +1810,396 @@ function h(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replac
 function esc(s){return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
 function setInfo(html){document.getElementById('syncInfo').innerHTML=html;}
 function toast(msg,type='success'){const t=document.getElementById('toast');t.textContent=msg;t.className='toast '+type+' show';setTimeout(()=>t.classList.remove('show'),3000);}
+// ── DASHBOARD ─────────────────────────────────────────
+function showDashboard(){
+  document.getElementById('dashArea').style.display='block';
+  document.getElementById('plannerLayout').style.display='none';
+  cur=null;
+  renderSidebar();
+  renderDashboard();
+}
+function showPlanner(){
+  document.getElementById('dashArea').style.display='none';
+  document.getElementById('plannerLayout').style.display='grid';
+}
+
+function renderDashboard(){
+  const el=document.getElementById('dashArea');if(!el)return;
+  const today=new Date();
+  const todayStr=ds(today);
+  const todayDow=today.getDay();
+  const dateLabel=['일','월','화','수','목','금','토'][todayDow]+'요일 '+
+    (today.getMonth()+1)+'월 '+today.getDate()+'일';
+
+  // Students with self-study today
+  const selfStudents=students.filter(n=>{
+    const cfg=settings[n];if(!cfg||!cfg.dayTypes)return false;
+    return (cfg.dayTypes[todayDow]||'class')==='self';
+  });
+
+  // Students with classes today (not off, not self)
+  const classStudents=students.filter(n=>{
+    const cfg=settings[n];
+    const dtype=cfg?.dayTypes?.[todayDow]||'class';
+    return dtype==='class'||dtype==='test';
+  });
+
+  const bgMap={완료:'#e8f8ec',대기:'#f5f3ef',조정:'#fef3e6',테스트:'#f0eaf8',불가:'#faeaea'};
+  const dotMap={완료:'#2d8c3e',대기:'#c8c0b0',조정:'#d4882a',테스트:'#7a4ec0',불가:'#b83232'};
+  const textMap={완료:'#1a6a2a',대기:'#6a7a8a',조정:'#8a5010',테스트:'#5a1e8a',불가:'#6a1a1a'};
+
+  let html=`<div class="dashboard">
+    <div class="db-header">
+      <div class="db-title">📋 오늘의 대시보드</div>
+      <div class="db-date">${dateLabel}</div>
+      <div class="db-actions">
+        <button class="db-btn primary" onclick="printToday()">🖨️ 오늘 학습 출력</button>
+        <button class="db-btn" onclick="openPrintRangeModal()">📄 주간 전체 출력</button>
+      </div>
+    </div>`;
+
+  // Self-study students section
+  if(selfStudents.length>0){
+    html+=`<div class="db-section">
+      <div class="db-section-title">🟡 오늘 자습</div>
+      <div class="db-self-wrap">`;
+    selfStudents.forEach(n=>{
+      html+=`<div class="db-self-chip" onclick="selStu('${esc(n)}')">${n}</div>`;
+    });
+    html+=`</div></div>`;
+  }
+
+  // Today's learning
+  html+=`<div class="db-section">
+    <div class="db-section-title">📚 오늘 학습 목록</div>
+    <div class="db-grid">`;
+
+  if(classStudents.length===0){
+    html+=`<div style="color:var(--text3);font-size:13px;padding:20px 0">오늘 수업인 학생이 없어요</div>`;
+  }else{
+    classStudents.forEach(n=>{
+      const todayRows=allData.filter(r=>r.name===n&&r.date===todayStr);
+      const done=todayRows.filter(r=>skKey(r.status)==='완료').length;
+      const cfg=settings[n];
+      const dtype=cfg?.dayTypes?.[todayDow]||'class';
+      const isTest=dtype==='test';
+      html+=`<div class="db-card" onclick="openQT('${esc(n)}')">
+        <div class="db-card-hdr">
+          <div class="db-card-av">${n[0]}</div>
+          <div>
+            <div class="db-card-name">${h(n)}${isTest?' <span style="font-size:10px;color:#7a4ec0">테스트</span>':''}</div>
+            <div class="db-card-stats">${done}/${todayRows.length} 완료</div>
+          </div>
+        </div>
+        <div class="db-card-body">`;
+      if(!todayRows.length){
+        html+=`<div class="db-empty">오늘 학습 없음</div>`;
+      }else{
+        todayRows.slice(0,5).forEach(row=>{
+          const key=skKey(row.status);
+          html+=`<div class="db-task">
+            <span class="db-task-dot" style="background:${dotMap[key]}"></span>
+            <span class="db-task-name">${h(row.task||'')}</span>
+            <span class="db-task-badge" style="background:${bgMap[key]};color:${textMap[key]}">${row.status||'대기'}</span>
+          </div>`;
+        });
+        if(todayRows.length>5) html+=`<div style="font-size:11px;color:var(--text3);text-align:center;margin-top:6px">외 ${todayRows.length-5}개</div>`;
+      }
+      html+=`</div></div>`;
+    });
+  }
+  html+=`</div></div></div>`;
+  el.innerHTML=html;
+}
+
+// ── PRINT FUNCTIONS ────────────────────────────────────
+function printToday(){
+  const today=new Date();
+  const todayStr=ds(today);
+  const todayDow=today.getDay();
+  const dateLabel=(today.getMonth()+1)+'월 '+today.getDate()+'일 ('+['일','월','화','수','목','금','토'][todayDow]+')';
+
+  let html=`<div class="print-page">
+    <div class="print-title">📚 오늘 학습 목록</div>
+    <div class="print-sub">${dateLabel} &nbsp;|&nbsp; 출력: ${new Date().toLocaleString('ko-KR')}</div>`;
+
+  students.forEach(n=>{
+    const rows=allData.filter(r=>r.name===n&&r.date===todayStr);
+    if(!rows.length)return;
+    html+=`<div class="print-section">
+      <div class="print-section-title">${n}</div>
+      <table class="print-table">
+        <thead><tr><th style="width:40%">학습 내용</th><th style="width:20%">상태</th><th>메모</th></tr></thead>
+        <tbody>`;
+    rows.forEach(row=>{
+      html+=`<tr>
+        <td>${row.task||''}</td>
+        <td>${row.status||'학습 대기'}</td>
+        <td>${row.memo||''}</td>
+      </tr>`;
+    });
+    html+=`</tbody></table></div>`;
+  });
+  html+=`</div>`;
+  openPrint(html);
+}
+
+function printWeek(){
+  const cfg0=settings[students[0]]||{startDow:1};
+  const wDs=weekDates(cfg0.startDow||1);
+  const dateRange=(wDs[0].getMonth()+1)+'/'+wDs[0].getDate()+' ~ '+(wDs[6].getMonth()+1)+'/'+wDs[6].getDate();
+
+  let html=`<div class="print-page">
+    <div class="print-title">📚 주간 학습 현황</div>
+    <div class="print-sub">${dateRange} &nbsp;|&nbsp; 출력: ${new Date().toLocaleString('ko-KR')}</div>`;
+
+  students.forEach((n,si)=>{
+    const weekRows=allData.filter(r=>r.name===n&&wDs.some(d=>ds(d)===r.date));
+    if(!weekRows.length)return;
+    if(si>0)html+=`<div class="page-break"></div>`;
+    html+=`<div class="print-section">
+      <div class="print-section-title">${n} — 주간 학습 목록</div>
+      <table class="print-table">
+        <thead><tr><th style="width:12%">날짜</th><th style="width:8%">요일</th><th style="width:38%">학습 내용</th><th style="width:18%">상태</th><th>메모</th></tr></thead>
+        <tbody>`;
+    wDs.forEach(d=>{
+      const dateStr=ds(d);
+      const dayRows=weekRows.filter(r=>r.date===dateStr);
+      if(!dayRows.length)return;
+      dayRows.forEach((row,i)=>{
+        html+=`<tr>
+          ${i===0?`<td rowspan="${dayRows.length}">${d.getMonth()+1}/${d.getDate()}</td><td rowspan="${dayRows.length}">${['일','월','화','수','목','금','토'][d.getDay()]}</td>`:''}
+          <td>${row.task||''}</td>
+          <td>${row.status||'학습 대기'}</td>
+          <td>${row.memo||''}</td>
+        </tr>`;
+      });
+    });
+    html+=`</tbody></table></div>`;
+  });
+  html+=`</div>`;
+  openPrint(html);
+}
+
+function openPrint(html){
+  const win=window.open('','_blank','width=900,height=700');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <style>
+      *{box-sizing:border-box}
+      body{font-family:"Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif;margin:0;padding:0;background:#fff;font-size:9pt}
+      .print-page{padding:12mm 15mm;max-width:210mm;margin:0 auto}
+      .print-title{font-size:16pt;font-weight:700;margin-bottom:3mm;border-bottom:2.5px solid #000;padding-bottom:3mm}
+      .print-sub{font-size:9pt;color:#666;margin-bottom:6mm}
+      .print-table{width:100%;border-collapse:collapse;font-size:8.5pt;margin-bottom:4mm;table-layout:fixed}
+      .print-table th{background:#e0e0e0;border:1px solid #000;padding:2mm 3mm;text-align:left;font-weight:700;word-break:keep-all}
+      .print-table td{border:1px solid #888;padding:2mm 3mm;vertical-align:top;word-break:break-word;word-wrap:break-word}
+      .print-table tr{page-break-inside:avoid}
+      .print-table tr:nth-child(even) td{background:#f5f5f5}
+      .print-section{margin-bottom:6mm;page-break-inside:avoid}
+      .print-section-title{font-size:11pt;font-weight:700;margin-bottom:3mm;border-left:4px solid #333;padding-left:3mm;page-break-after:avoid}
+      .page-break{page-break-before:always;height:0;margin:0;padding:0}
+      @media print{
+        @page{size:A4;margin:12mm 10mm}
+        body{margin:0;padding:0}
+        .print-page{padding:0}
+        .print-table{font-size:8pt}
+        .print-table td,.print-table th{padding:1.5mm 2.5mm}
+      }
+    </style></head><body>${html}
+    <script>window.onload=function(){window.print();}<\/script>
+    </body></html>`);
+  win.document.close();
+}
+
+// ── QUICK TASK POPUP ──────────────────────────────────
+let qtStudent=null;
+
+function openQT(name){
+  qtStudent=name;
+  const today=ds(new Date());
+  const rows=allData.filter(r=>r.name===name&&r.date===today);
+  document.getElementById('qtAv').textContent=name[0];
+  document.getElementById('qtName').textContent=name+' — 오늘 학습';
+  const listEl=document.getElementById('qtList');
+  if(!rows.length){
+    listEl.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">오늘 등록된 학습이 없어요</div>';
+    document.getElementById('qtOverlay').classList.add('open');
+    return;
+  }
+
+  const stBg={대기:'#f0f0f4',조정:'#fff0e0',완료:'#e8f8ec'};
+  const stBd={대기:'#c8c0b0',조정:'#e8a84a',완료:'#6db87a'};
+  const stTx={대기:'#6a7a8a',조정:'#8a5010',완료:'#1a6a2a'};
+  const bgMap2={완료:'#e8f8ec',대기:'#f5f3ef',조정:'#fef3e6',테스트:'#f0eaf8',불가:'#faeaea'};
+  const bdMap2={완료:'#6db87a',대기:'#c8c0b0',조정:'#e8a84a',테스트:'#a87ed4',불가:'#d47a7a'};
+  const txMap2={완료:'#1a6a2a',대기:'#6a7a8a',조정:'#8a5010',테스트:'#5a1e8a',불가:'#6a1a1a'};
+
+  listEl.innerHTML=rows.map(row=>{
+    const key=skKey(row.status);
+    const subs=Array.isArray(row.subtasks)?row.subtasks:[];
+    const hasSubs=subs.length>0;
+
+    // Path display
+    let pathEl='';
+    if(row.path){
+      const parts=row.path.split(' > ');
+      pathEl=`<div class="qt-item-sub">${h(parts.slice(0,-1).join(' > '))}</div>`;
+    }
+
+    if(hasSubs){
+      // Card with subtask badges
+      const doneCnt=subs.filter(s=>(s.status||'대기')==='완료').length;
+      const allDone=doneCnt===subs.length;
+      const badges=subs.map((st,si)=>{
+        const sk=st.status&&st.status.includes('완료')?'완료':st.status&&st.status.includes('조정')?'조정':'대기';
+        return`<span onclick="cycleQTSub(${row.id},${si},event)"
+          style="display:inline-flex;align-items:center;padding:4px 10px;border-radius:16px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid ${stBd[sk]};background:${stBg[sk]};color:${stTx[sk]};transition:all .15s;user-select:none"
+          title="클릭해서 상태 변경">${h(st.name)}</span>`;
+      }).join('');
+      return`<div style="padding:10px 4px;border-bottom:1px solid var(--surface2)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <div style="flex:1;min-width:0">
+            <div class="qt-item-name">${h(row.task||'')} <span style="font-size:10px;color:var(--text3)">${doneCnt}/${subs.length}</span></div>
+            ${pathEl}
+          </div>
+          <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:${bgMap2[key]};color:${txMap2[key]};border:1px solid ${bdMap2[key]};cursor:pointer" onclick="cycleQTStatus(${row.id})">${row.status||'대기'}</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px">${badges}</div>
+      </div>`;
+    }else{
+      // Simple card — click to cycle
+      const checkCls=key==='완료'?'done':key==='조정'?'adjust':'pending';
+      const checkIcon=key==='완료'?'✓':key==='조정'?'!':'–';
+      return`<div class="qt-item" onclick="cycleQTStatus(${row.id})">
+        <div class="qt-check ${checkCls}">${checkIcon}</div>
+        <div class="qt-item-info">
+          <div class="qt-item-name">${h(row.task||'')}</div>
+          ${pathEl}
+        </div>
+        <span class="qt-item-status" style="background:${bgMap2[key]};color:${txMap2[key]};border:1px solid ${bdMap2[key]}">${row.status||'대기'}</span>
+      </div>`;
+    }
+  }).join('');
+  document.getElementById('qtOverlay').classList.add('open');
+}
+
+async function cycleQTSub(id,idx,e){
+  e.stopPropagation();
+  const row=allData.find(r=>r.id===id);if(!row||!Array.isArray(row.subtasks))return;
+  const cycle=['대기','조정','완료'];
+  const cur2=row.subtasks[idx].status||'대기';
+  const curKey=cur2.includes('완료')?'완료':cur2.includes('조정')?'조정':'대기';
+  const next=cycle[(cycle.indexOf(curKey)+1)%3];
+  row.subtasks[idx].status=next;
+  const allDone=row.subtasks.every(s=>(s.status||'대기')==='완료');
+  const anyAdjust=row.subtasks.some(s=>(s.status||'대기')==='조정');
+  const newStatus=allDone?'학습 완료':anyAdjust?'조정 필요':'학습 대기';
+  row.status=newStatus;
+  await dbUpdate(id,{status:newStatus,subtasks:row.subtasks});
+  openQT(qtStudent);
+  renderDashboard();
+  renderSidebar();
+}
+
+async function cycleQTStatus(id){
+  const row=allData.find(r=>r.id===id);if(!row)return;
+  const cycle=['학습 대기','학습 완료','조정 필요'];
+  const cur2=row.status||'학습 대기';
+  const idx=cycle.indexOf(cur2);
+  const next=cycle[(idx+1)%cycle.length];
+  row.status=next;
+  // sync subtasks if present
+  if(Array.isArray(row.subtasks)&&row.subtasks.length){
+    const stStatus=next==='학습 완료'?'완료':next==='조정 필요'?'조정':'대기';
+    row.subtasks=row.subtasks.map(s=>({...s,status:stStatus}));
+    await dbUpdate(id,{status:next,subtasks:row.subtasks});
+  }else{
+    await dbUpdate(id,{status:next});
+  }
+  openQT(qtStudent);
+  renderDashboard();
+  renderSidebar();
+}
+function closeQT(e){
+  if(e.target===document.getElementById('qtOverlay'))
+    document.getElementById('qtOverlay').classList.remove('open');
+}
+function goToStudentPlanner(){
+  if(!qtStudent)return;
+  document.getElementById('qtOverlay').classList.remove('open');
+  selStu(qtStudent);
+}
+
+// ── PRINT RANGE MODAL ────────────────────────────────
+let printSelStudents=new Set();
+function openPrintRangeModal(){
+  // Default: this week
+  const cfg0=settings[students[0]]||{startDow:1};
+  const wDs=weekDates(cfg0.startDow||1);
+  document.getElementById('printDateFrom').value=ds(wDs[0]);
+  document.getElementById('printDateTo').value=ds(wDs[6]);
+  // Student selector
+  printSelStudents=new Set(students);
+  renderPrintStudentSel();
+  openM('printRangeModal');
+}
+function renderPrintStudentSel(){
+  const el=document.getElementById('printStudentSel');if(!el)return;
+  el.innerHTML=students.map(n=>{
+    const sel=printSelStudents.has(n);
+    return`<button onclick="togglePrintStudent('${esc(n)}')" style="padding:4px 12px;border-radius:20px;border:1.5px solid ${sel?'var(--navy)':'var(--border)'};background:${sel?'var(--navy)':'var(--surface2)'};color:${sel?'#fff':'var(--text2)'};font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;transition:all .12s">${h(n)}</button>`;
+  }).join('');
+}
+function togglePrintStudent(n){
+  if(printSelStudents.has(n))printSelStudents.delete(n);
+  else printSelStudents.add(n);
+  renderPrintStudentSel();
+}
+function executePrintWeek(){
+  const from=document.getElementById('printDateFrom').value;
+  const to=document.getElementById('printDateTo').value;
+  if(!from||!to){toast('날짜를 선택하세요','error');return;}
+  if(printSelStudents.size===0){toast('학생을 선택하세요','error');return;}
+  closeM('printRangeModal');
+  // Build date list
+  const dates=[];const cur2=new Date(from+'T00:00:00');const end=new Date(to+'T00:00:00');
+  while(cur2<=end){dates.push(ds(cur2));cur2.setDate(cur2.getDate()+1);}
+  const selList=[...printSelStudents].sort();
+  printWeekCustom(dates,from,to,selList);
+}
+function printWeekCustom(dates,from,to,selList){
+  const DKR2=['일','월','화','수','목','금','토'];
+  let html=`<div class="print-page">
+    <div class="print-title">📚 학습 현황 출력</div>
+    <div class="print-sub">${from} ~ ${to} &nbsp;|&nbsp; 출력: ${new Date().toLocaleString('ko-KR')}</div>`;
+  selList.forEach((n,si)=>{
+    const rows=allData.filter(r=>r.name===n&&dates.includes(r.date));
+    if(!rows.length)return;
+    if(si>0)html+=`<div class="page-break"></div>`;
+    html+=`<div class="print-section">
+      <div class="print-section-title">${n} — 학습 목록</div>
+      <table class="print-table">
+        <thead><tr><th style="width:11%">날짜</th><th style="width:7%">요일</th><th style="width:40%">학습 내용</th><th style="width:16%">상태</th><th>메모</th></tr></thead>
+        <tbody>`;
+    dates.forEach(dateStr=>{
+      const dayRows=rows.filter(r=>r.date===dateStr);
+      if(!dayRows.length)return;
+      const d=new Date(dateStr+'T00:00:00');
+      dayRows.forEach((row,i)=>{
+        html+=`<tr>
+          ${i===0?`<td rowspan="${dayRows.length}" style="font-weight:600">${d.getMonth()+1}/${d.getDate()}</td><td rowspan="${dayRows.length}">${DKR2[d.getDay()]}</td>`:''}
+          <td>${h(row.task||'')}</td>
+          <td>${h(row.status||'학습 대기')}</td>
+          <td>${h(row.memo||'')}</td>
+        </tr>`;
+      });
+    });
+    html+=`</tbody></table></div>`;
+  });
+  html+=`</div>`;
+  openPrint(html);
+}
+
 </script>
 </body>
 </html>
